@@ -143,17 +143,29 @@ Nessus Essentials (free tier) was installed on the Kali Linux VM for vulnerabili
    ```
 5. Navigated to `https://localhost:8834` in the Kali browser to complete the setup wizard and enter the activation code.
 
-**Screenshot – Nessus installation in terminal:**
+**Screenshot – Nessus initializing and downloading plugins:**
 
-![Nessus Installation](images/03-nessus-install.png)
+![Nessus Initializing](images/03-nessus-initializing.png)
 
-> *The screenshot shows the Nessus installation terminal output with all cryptographic component checks passing (`Pass`), confirming a successful install of Nessus version 3.1.2.*
+> *Nessus initializing at `localhost:8834` after installation, downloading plugins before becoming fully operational.*
 
-**Screenshot – Nessus running and accessible in browser:**
+**Screenshot – Nessus plugin download in progress:**
 
-![Nessus Welcome Page](images/04-nessus-welcome.png)
+![Nessus Downloading](images/04-nessus-downloading.png)
 
-> *The screenshot shows the Nessus Essentials web UI at `https://localhost:8834`, confirming successful installation. Firefox displayed a self-signed certificate warning (expected for local Nessus), which was bypassed via Advanced → Accept the Risk and Continue.*
+> *Nessus completing the plugin download phase. This process takes several minutes on first launch.*
+
+**Screenshot – Nessus Professional dashboard:**
+
+![Nessus Dashboard](images/05-nessus-dashboard.png)
+
+> *Nessus Professional fully running at `localhost:8834`, showing the My Scans dashboard with the welcome prompt confirming successful installation and login.*
+
+**Screenshot – Nessus report templates:**
+
+![Nessus Reports](images/06-nessus-reports.png)
+
+> *The Nessus Customized Reports page showing 15 available report templates, confirming the scanner is fully operational.*
 
 ---
 
@@ -174,13 +186,13 @@ Metasploitable is an intentionally vulnerable Linux VM designed as a penetration
 
 **Screenshot – Metasploitable boot sequence:**
 
-![Metasploitable Running](images/05-metasploitable-boot.png)
+![Metasploitable Running](images/07-metasploitable-boot.png)
 
 > *The screenshot shows Metasploitable booting with all services starting successfully. The login banner warns: "Never expose this VM to an untrusted network!" and displays the default credentials.*
 
 **Screenshot – Metasploitable ifconfig:**
 
-![Metasploitable ifconfig](images/06-metasploitable-ifconfig.png)
+![Metasploitable ifconfig](images/08-metasploitable-ifconfig.png)
 
 > *The screenshot shows `ifconfig` output from Metasploitable after login, confirming the `eth0` interface is up with IP address `10.0.2.15`.*
 
@@ -200,13 +212,13 @@ To verify that the Kali Linux attacker machine can reach the Metasploitable targ
 
 **Screenshot – Kali network configuration (NAT Network):**
 
-![Kali Network Config](images/07-kali-network-config.png)
+![Kali Network Config](images/09-kali-network-config.png)
 
 > *The screenshot shows Kali's VirtualBox network adapter set to NAT Network mode, allowing VM-to-VM communication and internet access through the host machine.*
 
 **Screenshot – Ping from Kali to Metasploitable:**
 
-![Ping Test](images/08-ping-metasploitable.png)
+![Ping Test](images/10-ping-metasploitable.png)
 
 > *The screenshot shows network activity from the Kali Linux terminal confirming connectivity to the Metasploitable target on the NAT Network.*
 
