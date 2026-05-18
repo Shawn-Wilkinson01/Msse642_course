@@ -1,10 +1,8 @@
-# Hands-On Assignment #1: Penetration Testing Lab Setup
+# Assignment #1: Penetration Testing Lab Setup
 
 **Course:** MSSE 642 – Software Assurance  
 **Author:** Shawn Wilkinson  
 **Date:** May 2026  
-**Version:** 3.0  
-
 ---
 
 ## Table of Contents
