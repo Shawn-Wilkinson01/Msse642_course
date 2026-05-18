@@ -121,7 +121,7 @@ Kali Linux was downloaded from the [official Kali website](https://www.kali.org/
 
 ![Kali Linux Running](images/02-kali-logged-in.png)
 
-> *The screenshot shows the Kali Linux 2026.1 desktop environment with a terminal open, confirming a successful login as user `swmsse642`.*
+> *The screenshot shows the Kali Linux 2026.1 desktop environment with a terminal open, confirming a successful login as user `kali`.*
 
 ---
 
