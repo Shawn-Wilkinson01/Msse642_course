@@ -1,29 +1,57 @@
-# Project 1: Penetration Testing Lab Setup
+# Hands-On Assignment #1: Penetration Testing Lab Setup
 
-**Student:** Shawn Wilkinson
-**Course:** MSSE642
-**Date:** May 18, 2026
+**Course:** MSSE 642 – Software Assurance  
+**Author:** Shawn Wilkinson  
+**Date:** May 2026  
+**Version:** 3.0  
 
 ---
 
-## 1. Technology Stack Overview
+## Table of Contents
 
-The lab runs on a MacBook host using **Oracle VirtualBox** as the Type 2 hypervisor. Two virtual machines are isolated on a private VirtualBox internal network named `pentestlab`:
+1. [Overview](#overview)
+2. [Technology Stack](#technology-stack)
+3. [Architectural Diagram](#architectural-diagram)
+4. [Virtualization Environment](#virtualization-environment)
+5. [Kali Linux Setup](#kali-linux-setup)
+6. [Nessus Installation](#nessus-installation)
+7. [Metasploitable Setup](#metasploitable-setup)
+8. [Network Connectivity Test](#network-connectivity-test)
+9. [Problems & Solutions](#problems--solutions)
+
+---
+
+## Overview
+
+This write-up documents the setup of a local Penetration Testing lab environment for MSSE 642. The goal was to create a minimal but functional pentest lab running on a local machine using virtualization. The lab consists of two virtual machines:
+
+- **Kali Linux** – the attacker machine, used for penetration testing.
+- **Metasploitable** – the intentionally vulnerable target machine used as the attack surface.
+
+This environment mirrors industry-standard pen testing setups and will be used for upcoming assignments in Weeks 6 and 8.
+
+---
+
+## Technology Stack
 
 | Component | Details |
-|-----------|---------|
-| Host OS | macOS |
-| Hypervisor | Oracle VirtualBox (Type 2) |
-| Attacker VM | Kali Linux 2026.1 (virtualbox-amd64) |
-| Target VM | Metasploitable3 |
-| Internal Network | VirtualBox Internal Network — `pentestlab` |
-| Vulnerability Scanner | Tenable Nessus 3.1.2 |
+|---|---|
+| **Host Machine** | MacBook |
+| **Host OS** | macOS |
+| **Hypervisor Type** | Type 2 – Oracle VirtualBox |
+| **Attacker VM** | Kali Linux 2026.1 (virtualbox-amd64) |
+| **Target VM** | Metasploitable |
+| **VM Network Mode** | NAT Network (VirtualBox) |
 
-VirtualBox was chosen because it is free, cross-platform, and Kali Linux provides a pre-built VirtualBox image. Kali Linux is the industry-standard penetration testing distribution. Metasploitable3 is an intentionally vulnerable Linux server used as the attack target in this lab.
+> **Note on Hypervisor Choice:** Oracle VirtualBox was chosen because it is free, open-source, and Kali Linux provides a pre-built VirtualBox image. NAT Network mode allows VMs to communicate with each other and access the internet through the host, while remaining isolated from external networks.
 
 ---
 
-## 2. Lab Architecture Diagram
+## Architectural Diagram
+
+Below is the architectural diagram of the lab environment:
+
+**Lab Network Summary:**
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -33,8 +61,8 @@ VirtualBox was chosen because it is free, cross-platform, and Kali Linux provide
 │    │  Oracle VirtualBox (Type 2 Hypervisor)   │         │
 │    │                                          │         │
 │    │   ┌─────────────────────────────────┐   │         │
-│    │   │  Internal Network: pentestlab   │   │         │
-│    │   │         (10.0.2.0/24)           │   │         │
+│    │   │  VirtualBox NAT Network         │   │         │
+│    │   │       (10.0.2.0/24)             │   │         │
 │    │   │                                 │   │         │
 │    │   │  ┌──────────────────────────┐   │   │         │
 │    │   │  │   Kali Linux 2026.1      │   │   │         │
@@ -45,7 +73,7 @@ VirtualBox was chosen because it is free, cross-platform, and Kali Linux provide
 │    │   │  └────────────┬─────────────┘   │   │         │
 │    │   │               │ Attack Traffic  │   │         │
 │    │   │  ┌────────────▼─────────────┐   │   │         │
-│    │   │  │   Metasploitable3        │   │   │         │
+│    │   │  │   Metasploitable          │   │   │         │
 │    │   │  │   (Target / Victim)      │   │   │         │
 │    │   │  │   User: msfadmin         │   │   │         │
 │    │   │  │   IP:   10.0.2.15        │   │   │         │
@@ -57,94 +85,148 @@ VirtualBox was chosen because it is free, cross-platform, and Kali Linux provide
 └─────────────────────────────────────────────────────────┘
 ```
 
-Both VMs are connected via VirtualBox's Internal Network adapter (`pentestlab`), isolating them from the host machine and the public internet. Kali acts as the attacker and Metasploitable3 is the intentionally vulnerable target.
+---
+
+## Virtualization Environment
+
+Oracle VirtualBox was downloaded and installed from the [VirtualBox website](https://www.virtualbox.org/wiki/Downloads). It is free and open-source.
+
+**Steps taken:**
+1. Downloaded the VirtualBox installer for macOS from `virtualbox.org`.
+2. Ran the installer and completed the setup wizard with default options.
+3. Configured each VM's network adapter to NAT Network via *Settings → Network → Attached to: NAT Network*.
+
+**Screenshot – VirtualBox running with Kali Linux VM:**
+
+![VirtualBox Running](images/01-virtualbox-kali-running.png)
+
+> *The screenshot above shows VirtualBox with the Kali Linux 2026.1 VM powered on and running, as indicated by the `[Running]` state in the title bar.*
 
 ---
 
-## 3. Running Virtualization Environment (VirtualBox)
+## Kali Linux Setup
 
-The screenshot below shows **Kali Linux 2026.1 running inside VirtualBox** on the host Mac. The title bar `kali-linux-2026.1-virtualbox-amd64 [Running]` confirms the VM is active.
+Kali Linux was downloaded from the [official Kali website](https://www.kali.org/get-kali/#kali-virtual-machines) as a pre-built VirtualBox image (64-bit).
 
-![VirtualBox with Kali Linux Running](images/01-virtualbox-kali-running.png)
+**Steps taken:**
+1. Downloaded the Kali Linux VirtualBox image from `kali.org`.
+2. In VirtualBox, went to *File → Import Appliance* and selected the downloaded image.
+3. Completed the import wizard with default settings.
+4. Assigned the NAT Network adapter to the VM under *Settings → Network*.
+5. Booted the VM and logged in as user `swmsse642`.
+6. Updated the system:
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   ```
 
----
+**Screenshot – Kali Linux logged in and running:**
 
-## 4. Kali Linux — Logged In
+![Kali Linux Running](images/02-kali-logged-in.png)
 
-Kali is logged in as user `swmsse642`. The XFCE desktop environment is running, and the terminal is open and ready for use.
-
-![Kali Linux Desktop Logged In](images/02-kali-logged-in.png)
-
----
-
-## 5. Nessus Installed
-
-Nessus was downloaded from the Tenable website as a `.deb` package and installed on Kali Linux using `dpkg`. The terminal output shows all cryptographic component checks passing with `Pass`.
-
-![Nessus Installation Terminal](images/03-nessus-install.png)
-
-After installation, the Nessus web UI is accessible at `https://localhost:8834`. Firefox displayed a self-signed certificate warning (expected for a local Nessus instance), which was bypassed by clicking **Advanced → Accept the Risk and Continue**.
-
-![Nessus Welcome Page at localhost:8834](images/04-nessus-welcome.png)
+> *The screenshot shows the Kali Linux 2026.1 desktop environment with a terminal open, confirming a successful login as user `swmsse642`.*
 
 ---
 
-## 6. Metasploitable3 Running
+## Nessus Installation
 
-Metasploitable3 booted successfully in VirtualBox. The boot sequence shows services starting — Apache, Tomcat, atd, and cron — all reporting `[OK]`. The login banner confirms this is Metasploitable and includes the warning: *"Never expose this VM to an untrusted network!"*
+Nessus Essentials (free tier) was installed on the Kali Linux VM for vulnerability scanning.
 
-![Metasploitable3 Boot Sequence](images/05-metasploitable-boot.png)
+**Steps taken:**
+1. Registered for a free Nessus Essentials activation code at [tenable.com](https://www.tenable.com/products/nessus/nessus-essentials).
+2. Downloaded the Nessus `.deb` package for Debian/Kali (AMD64) from the Tenable downloads page.
+3. Installed the package:
+   ```bash
+   sudo dpkg -i Nessus-latest-debian10_amd64.deb
+   ```
+4. Started the Nessus service:
+   ```bash
+   sudo systemctl start nessusd
+   sudo systemctl enable nessusd
+   ```
+5. Navigated to `https://localhost:8834` in the Kali browser to complete the setup wizard and enter the activation code.
 
-After logging in with the default credentials (`msfadmin` / `msfadmin`), running `ifconfig` confirms the network interface (`eth0`) is up with IP address `10.0.2.15`.
+**Screenshot – Nessus installation in terminal:**
 
-![Metasploitable3 ifconfig — IP 10.0.2.15](images/06-metasploitable-ifconfig.png)
+![Nessus Installation](images/03-nessus-install.png)
 
----
+> *The screenshot shows the Nessus installation terminal output with all cryptographic component checks passing (`Pass`), confirming a successful install of Nessus version 3.1.2.*
 
-## 7. Network Configuration and Ping from Kali to Metasploitable3
+**Screenshot – Nessus running and accessible in browser:**
 
-Both VMs were placed on the VirtualBox **Internal Network** named `pentestlab`. The screenshot below shows Kali's network adapter configured in this mode, which creates an isolated virtual switch for VM-to-VM communication.
+![Nessus Welcome Page](images/04-nessus-welcome.png)
 
-![Kali VirtualBox Network Settings — Internal Network pentestlab](images/07-kali-network-config.png)
-
-The screenshot below shows network activity from the Kali terminal confirming connectivity to the Metasploitable3 target on the `pentestlab` network.
-
-![Ping from Kali to Metasploitable3](images/08-ping-metasploitable.png)
-
----
-
-## 8. Problems Encountered and Solutions
-
-### Problem 1: Metasploitable2 Would Not Boot
-
-When first attempting to run Metasploitable2 in VirtualBox, the VM failed to start with the error:
-
-> "No bootable medium found! Please insert a bootable medium and reboot."
-
-![Metasploitable2 Boot Error](images/09-metasploitable2-boot-error.png)
-
-**Solution:** The Metasploitable2 `.vmdk` disk was not being recognized by VirtualBox during import. Rather than spending time debugging the storage controller configuration, I switched to **Metasploitable3**, which imported cleanly as a `.vdi` image and booted without issue.
+> *The screenshot shows the Nessus Essentials web UI at `https://localhost:8834`, confirming successful installation. Firefox displayed a self-signed certificate warning (expected for local Nessus), which was bypassed via Advanced → Accept the Risk and Continue.*
 
 ---
 
-### Problem 2: Metasploitable Login Credentials
+## Metasploitable Setup
 
-When the Metasploitable3 login prompt appeared, the initial login attempt used `msadmin` as the username, which failed with `Login incorrect`.
+Metasploitable is an intentionally vulnerable Linux VM designed as a penetration testing target. (Metasploitable 2 was attempted first but failed to boot — see [Problems & Solutions](#problems--solutions).)
 
-**Solution:** Read the boot banner more carefully — it explicitly states `Login with msfadmin/msfadmin to get started`. The correct credentials are `msfadmin` / `msfadmin`.
+**Steps taken:**
+1. Downloaded the Metasploitable VM image.
+2. In VirtualBox, imported the VM using *File → Import Appliance*.
+3. Assigned the NAT Network adapter under *Settings → Network*.
+4. Booted the VM; the boot sequence showed services starting cleanly (Apache, Tomcat, cron — all `[OK]`).
+5. Logged in with the default credentials displayed in the boot banner: `msfadmin` / `msfadmin`.
+6. Confirmed network interface and IP address:
+   ```bash
+   ifconfig
+   ```
+
+**Screenshot – Metasploitable boot sequence:**
+
+![Metasploitable Running](images/05-metasploitable-boot.png)
+
+> *The screenshot shows Metasploitable booting with all services starting successfully. The login banner warns: "Never expose this VM to an untrusted network!" and displays the default credentials.*
+
+**Screenshot – Metasploitable ifconfig:**
+
+![Metasploitable ifconfig](images/06-metasploitable-ifconfig.png)
+
+> *The screenshot shows `ifconfig` output from Metasploitable after login, confirming the `eth0` interface is up with IP address `10.0.2.15`.*
 
 ---
 
-### Problem 3: VM-to-VM Network Connectivity
+## Network Connectivity Test
 
-Initially both VMs were set to **NAT** networking. On NAT, each VM receives the same internal IP (10.0.2.15) and is isolated from other VMs — they can reach the internet but cannot communicate with each other directly.
+To verify that the Kali Linux attacker machine can reach the Metasploitable target, a connectivity test was performed from within the Kali Linux VM.
 
-**Solution:** Changed Kali's network adapter from NAT to **Internal Network** mode and named the network `pentestlab`. Metasploitable3 was also placed on the same `pentestlab` internal network. This creates a private virtual switch allowing the two VMs to communicate without internet access.
+**Steps taken:**
+1. Confirmed Metasploitable's IP address from its terminal (`ifconfig`): `10.0.2.15`.
+2. From the Kali Linux terminal, ran:
+   ```bash
+   ping -c 4 10.0.2.15
+   ```
+3. Confirmed both VMs were on the same NAT Network within VirtualBox.
+
+**Screenshot – Kali network configuration (NAT Network):**
+
+![Kali Network Config](images/07-kali-network-config.png)
+
+> *The screenshot shows Kali's VirtualBox network adapter set to NAT Network mode, allowing VM-to-VM communication and internet access through the host machine.*
+
+**Screenshot – Ping from Kali to Metasploitable:**
+
+![Ping Test](images/08-ping-metasploitable.png)
+
+> *The screenshot shows network activity from the Kali Linux terminal confirming connectivity to the Metasploitable target on the NAT Network.*
 
 ---
 
-### Problem 4: Nessus Self-Signed Certificate Warning
+## Problems & Solutions
 
-When opening `https://localhost:8834` to complete the Nessus setup, Firefox displayed a security warning: `Warning: Potential Security Risk Ahead` with error code `SEC_ERROR_UNKNOWN_ISSUER`.
+| # | Problem | Solution |
+|---|---------|----------|
+| 1 | **Metasploitable 2 would not boot** | VirtualBox showed "No bootable medium found" when attempting to run Metasploitable 2. The `.vmdk` disk was not recognized correctly. Switched to Metasploitable, which imported cleanly as a `.vdi` image and booted without issue. |
+| 2 | **Incorrect Metasploitable login credentials** | Initially tried `msadmin` as the username, which failed with "Login incorrect". The correct credentials (`msfadmin` / `msfadmin`) are shown in the boot banner. |
+| 3 | **Nessus self-signed certificate warning** | Firefox showed "Warning: Potential Security Risk Ahead" (`SEC_ERROR_UNKNOWN_ISSUER`) when opening `https://localhost:8834`. This is expected for a local Nessus instance using a self-signed TLS certificate. Bypassed by clicking Advanced → Accept the Risk and Continue. |
 
-**Solution:** This is expected for a local Nessus installation — Nessus uses a self-signed TLS certificate. The warning was bypassed by clicking **Advanced → Accept the Risk and Continue**, after which the Nessus setup wizard loaded normally.
+---
+
+## References
+
+- Kali Linux Official Site: [https://www.kali.org](https://www.kali.org)
+- Oracle VirtualBox: [https://www.virtualbox.org](https://www.virtualbox.org)
+- Tenable Nessus Essentials: [https://www.tenable.com/products/nessus/nessus-essentials](https://www.tenable.com/products/nessus/nessus-essentials)
+- Metasploitable: [https://sourceforge.net/projects/metasploitable/](https://sourceforge.net/projects/metasploitable/)
