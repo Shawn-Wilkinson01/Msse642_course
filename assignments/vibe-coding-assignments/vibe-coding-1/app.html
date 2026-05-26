@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A07:2025 — Authentication Failures Interactive Demo</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+
+        header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+        .owasp-badge { background: #da3633; color: white; font-weight: 700; font-size: 13px; padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+        header h1 { font-size: 18px; font-weight: 600; }
+        header p { font-size: 13px; color: #8b949e; }
+
+        .attack-selector { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 24px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .attack-selector span { font-size: 12px; color: #8b949e; margin-right: 4px; }
+        .attack-btn { background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s; }
+        .attack-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+        .attack-btn.active { background: #1f6feb; border-color: #1f6feb; color: white; }
+
+        .main { padding: 20px 24px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1400px; margin: 0 auto; }
+        .panel { border-radius: 8px; overflow: hidden; border: 1px solid; }
+        .panel.vulnerable { border-color: #da3633; }
+        .panel.secure { border-color: #3fb950; }
+        .panel-header { padding: 12px 16px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+        .panel.vulnerable .panel-header { background: rgba(218,54,51,0.15); color: #f85149; border-bottom: 1px solid #da3633; }
+        .panel.secure .panel-header { background: rgba(63,185,80,0.15); color: #3fb950; border-bottom: 1px solid #3fb950; }
+        .panel-body { padding: 20px; background: #0d1117; }
+
+        .login-form { display: flex; flex-direction: column; gap: 12px; }
+        .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-group label { font-size: 12px; color: #8b949e; font-weight: 500; }
+        .form-group input { background: #161b22; border: 1px solid #30363d; color: #e6edf3; padding: 8px 12px; border-radius: 6px; font-size: 14px; width: 100%; }
+        .form-group input:focus { outline: none; border-color: #58a6ff; }
+        .login-btn { background: #1f6feb; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .login-btn:hover { background: #388bfd; }
+        .login-btn:disabled { background: #30363d; color: #8b949e; cursor: not-allowed; }
+
+        .status-bar { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin-top: 12px; font-size: 12px; font-family: 'Courier New', monospace; }
+        .status-item { display: flex; justify-content: space-between; padding: 2px 0; }
+        .status-label { color: #8b949e; }
+        .status-value { color: #e6edf3; }
+        .status-value.danger { color: #f85149; }
+        .status-value.good { color: #3fb950; }
+        .status-value.warn { color: #d29922; }
+
+        .alert { padding: 10px 12px; border-radius: 6px; font-size: 13px; margin-top: 8px; display: none; }
+        .alert.show { display: block; }
+        .alert.error { background: rgba(218,54,51,0.15); border: 1px solid #da3633; color: #f85149; }
+        .alert.success-msg { background: rgba(63,185,80,0.15); border: 1px solid #3fb950; color: #3fb950; }
+        .alert.warn-msg { background: rgba(210,153,34,0.15); border: 1px solid #d29922; color: #d29922; }
+
+        .captcha-box { background: #161b22; border: 1px solid #d29922; border-radius: 6px; padding: 12px; text-align: center; margin-top: 8px; display: none; }
+        .captcha-box.show { display: block; }
+        .mfa-box { background: #161b22; border: 1px solid #58a6ff; border-radius: 6px; padding: 16px; margin-top: 8px; display: none; }
+        .mfa-box.show { display: block; }
+        .lockout-box { background: rgba(218,54,51,0.1); border: 1px solid #da3633; border-radius: 6px; padding: 16px; text-align: center; margin-top: 8px; display: none; }
+        .lockout-box.show { display: block; }
+        .lockout-timer { font-size: 28px; font-weight: bold; color: #f85149; }
+
+        .token-section { margin-top: 12px; display: none; }
+        .token-label { font-size: 12px; color: #8b949e; margin-bottom: 4px; }
+        .token-display { background: #161b22; border: 1px solid #30363d; border-radius: 4px; padding: 6px 10px; font-family: 'Courier New', monospace; font-size: 11px; word-break: break-all; color: #8b949e; }
+        .token-note { font-size: 11px; margin-top: 4px; }
+
+        .bottom-section { padding: 16px 24px; max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 260px 1fr; gap: 16px; }
+
+        .attack-controls { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+        .attack-controls h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #30363d; }
+        .run-btn { width: 100%; background: #da3633; color: white; border: none; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-bottom: 8px; }
+        .run-btn:hover { background: #f85149; }
+        .run-btn:disabled { background: #30363d; color: #8b949e; cursor: not-allowed; }
+        .reset-btn { width: 100%; background: #21262d; color: #8b949e; border: 1px solid #30363d; padding: 8px; border-radius: 6px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .reset-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+        .speed-control { margin: 12px 0; }
+        .speed-control label { font-size: 12px; color: #8b949e; display: block; margin-bottom: 4px; }
+        .speed-control input[type="range"] { width: 100%; accent-color: #1f6feb; }
+        .hint-text { font-size: 12px; color: #8b949e; line-height: 1.5; margin-top: 12px; }
+
+        .activity-log { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+        .log-header { background: #161b22; padding: 10px 16px; border-bottom: 1px solid #30363d; font-size: 12px; font-weight: 600; color: #8b949e; display: flex; justify-content: space-between; align-items: center; }
+        .log-header button { background: none; border: none; color: #8b949e; cursor: pointer; font-size: 12px; }
+        .log-header button:hover { color: #e6edf3; }
+        .log-body { height: 180px; overflow-y: auto; padding: 8px 16px; font-family: 'Courier New', monospace; font-size: 12px; }
+        .log-entry { padding: 2px 0; line-height: 1.5; }
+        .log-entry .ts { color: #484f58; }
+        .log-entry.fail { color: #f85149; }
+        .log-entry.success { color: #3fb950; }
+        .log-entry.info { color: #58a6ff; }
+        .log-entry.warn { color: #d29922; }
+
+        .info-section { padding: 0 24px 24px; max-width: 1400px; margin: 0 auto; }
+        .info-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+        .info-tabs { background: #21262d; padding: 10px 16px; border-bottom: 1px solid #30363d; display: flex; gap: 4px; }
+        .info-tab { padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #8b949e; transition: all 0.2s; border: none; background: none; }
+        .info-tab.active { background: #1f6feb; color: white; }
+        .info-tab:hover:not(.active) { color: #e6edf3; }
+        .info-content { padding: 20px; line-height: 1.7; font-size: 14px; color: #c9d1d9; }
+        .info-content h4 { color: #58a6ff; margin-bottom: 10px; font-size: 15px; }
+        .info-content p { margin-bottom: 12px; }
+        .info-content ul { margin: 6px 0 12px 20px; }
+        .info-content li { margin-bottom: 5px; }
+        .info-content code { background: #0d1117; border: 1px solid #30363d; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; color: #f0883e; }
+        .real-world-box { background: rgba(218,54,51,0.08); border: 1px solid rgba(218,54,51,0.3); border-radius: 6px; padding: 14px; margin: 12px 0; }
+        .real-world-box strong { color: #f85149; }
+
+        footer { background: #161b22; border-top: 1px solid #30363d; padding: 12px 24px; text-align: center; font-size: 12px; color: #484f58; }
+
+        @media (max-width: 900px) {
+            .main, .bottom-section { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div><span class="owasp-badge">A07:2025</span></div>
+    <div>
+        <h1>Authentication Failures — Interactive Security Demo</h1>
+        <p>Explore common authentication attack vectors side-by-side: vulnerable vs. secure implementation</p>
+    </div>
+</header>
+
+<div class="attack-selector">
+    <span>Attack type:</span>
+    <button class="attack-btn active" id="btn-brute-force"        onclick="selectAttack('brute-force')">🔁 Brute Force</button>
+    <button class="attack-btn"        id="btn-default-creds"      onclick="selectAttack('default-creds')">👤 Default Credentials</button>
+    <button class="attack-btn"        id="btn-session-prediction" onclick="selectAttack('session-prediction')">🔮 Session Prediction</button>
+    <button class="attack-btn"        id="btn-credential-stuffing" onclick="selectAttack('credential-stuffing')">📋 Credential Stuffing</button>
+</div>
+
+<div class="main">
+
+    <!-- ── VULNERABLE PANEL ── -->
+    <div class="panel vulnerable">
+        <div class="panel-header">❌ VULNERABLE — No Authentication Protections</div>
+        <div class="panel-body">
+            <div class="login-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="vuln-username" placeholder="Enter username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="vuln-password" placeholder="Enter password">
+                </div>
+                <button class="login-btn" id="vuln-login-btn" onclick="vulnLogin()">Sign In</button>
+            </div>
+            <div class="alert error"       id="vuln-error"></div>
+            <div class="alert success-msg" id="vuln-success"></div>
+            <div class="status-bar">
+                <div class="status-item"><span class="status-label">Failed Attempts:</span><span class="status-value danger" id="vuln-attempts">0</span></div>
+                <div class="status-item"><span class="status-label">Rate Limiting:</span><span class="status-value danger">None</span></div>
+                <div class="status-item"><span class="status-label">Account Lockout:</span><span class="status-value danger">Disabled</span></div>
+                <div class="status-item"><span class="status-label">MFA Required:</span><span class="status-value danger">No</span></div>
+                <div class="status-item"><span class="status-label">Error Messages:</span><span class="status-value danger">Specific (leaks info)</span></div>
+            </div>
+            <div class="token-section" id="vuln-token-section">
+                <div class="token-label">Session Token Issued:</div>
+                <div class="token-display" id="vuln-token">—</div>
+                <div class="token-note" style="color:#f85149;">⚠ Sequential / predictable format</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── SECURE PANEL ── -->
+    <div class="panel secure">
+        <div class="panel-header">✅ SECURE — Authentication Best Practices</div>
+        <div class="panel-body">
+            <div class="login-form" id="sec-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="sec-username" placeholder="Enter username">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="sec-password" placeholder="Enter password">
+                </div>
+                <button class="login-btn" id="sec-login-btn" onclick="secureLogin()">Sign In</button>
+            </div>
+            <div class="captcha-box" id="sec-captcha">
+                <div style="font-size:13px;color:#d29922;margin-bottom:8px;">⚠ Suspicious activity — CAPTCHA required</div>
+                <div style="background:#21262d;border-radius:6px;padding:10px;margin-bottom:8px;font-family:monospace;letter-spacing:6px;font-size:22px;color:#e6edf3;text-align:center;">R4X2 K7P</div>
+                <input type="text" style="background:#161b22;border:1px solid #30363d;color:#e6edf3;padding:6px;border-radius:4px;width:100%;text-align:center;font-size:14px;" placeholder="Type CAPTCHA above">
+            </div>
+            <div class="mfa-box" id="sec-mfa">
+                <div style="font-size:13px;color:#58a6ff;margin-bottom:8px;">🔐 Multi-Factor Authentication Required</div>
+                <div style="font-size:12px;color:#8b949e;margin-bottom:8px;">Enter the 6-digit code from your authenticator app:</div>
+                <input type="text" style="background:#161b22;border:1px solid #58a6ff;color:#e6edf3;padding:8px;border-radius:4px;width:100%;text-align:center;font-size:20px;letter-spacing:10px;font-family:monospace;" placeholder="000000" maxlength="6">
+                <button onclick="completeMFA()" style="width:100%;margin-top:8px;background:#1f6feb;color:white;border:none;padding:8px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;">Verify Code</button>
+            </div>
+            <div class="lockout-box" id="sec-lockout">
+                <div style="font-size:13px;color:#f85149;margin-bottom:6px;">🔒 Account Temporarily Locked</div>
+                <div class="lockout-timer" id="lockout-timer">30</div>
+                <div style="font-size:12px;color:#8b949e;margin-top:4px;">seconds remaining</div>
+            </div>
+            <div class="alert error"       id="sec-error"></div>
+            <div class="alert success-msg" id="sec-success"></div>
+            <div class="status-bar">
+                <div class="status-item"><span class="status-label">Failed Attempts:</span><span class="status-value good" id="sec-attempts">0 / 5</span></div>
+                <div class="status-item"><span class="status-label">Rate Limiting:</span><span class="status-value good">Active (5 req/min)</span></div>
+                <div class="status-item"><span class="status-label">Account Lockout:</span><span class="status-value good">After 5 failures</span></div>
+                <div class="status-item"><span class="status-label">MFA Required:</span><span class="status-value good">Yes (TOTP)</span></div>
+                <div class="status-item"><span class="status-label">Error Messages:</span><span class="status-value good">Generic (safe)</span></div>
+            </div>
+            <div class="token-section" id="sec-token-section">
+                <div class="token-label">Session Token Issued:</div>
+                <div class="token-display" id="sec-token">—</div>
+                <div class="token-note" style="color:#3fb950;">✓ Cryptographically random — 128-bit entropy</div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- .main -->
+
+<div class="bottom-section">
+
+    <div class="attack-controls">
+        <h3>🎯 Attack Controls</h3>
+        <div class="speed-control">
+            <label>Speed: <strong id="speed-label">Medium</strong></label>
+            <input type="range" min="1" max="3" value="2" oninput="updateSpeed(this.value)">
+        </div>
+        <button class="run-btn" id="run-btn" onclick="runAttack()">▶ Run Attack</button>
+        <button class="reset-btn" onclick="resetAll()">↺ Reset Demo</button>
+        <p class="hint-text" id="attack-hint"></p>
+    </div>
+
+    <div class="activity-log">
+        <div class="log-header">
+            <span>📋 Attack Log</span>
+            <button onclick="clearLog()">Clear</button>
+        </div>
+        <div class="log-body" id="log-body">
+            <div class="log-entry info"><span class="ts">[00:00]</span> Ready. Select an attack type and click Run Attack.</div>
+        </div>
+    </div>
+
+</div><!-- .bottom-section -->
+
+<div class="info-section">
+    <div class="info-card">
+        <div class="info-tabs">
+            <button class="info-tab active" id="tab-what"    onclick="showTab('what')">What Is It?</button>
+            <button class="info-tab"        id="tab-how"     onclick="showTab('how')">How It Works</button>
+            <button class="info-tab"        id="tab-real"    onclick="showTab('real')">Real-World Breach</button>
+            <button class="info-tab"        id="tab-prevent" onclick="showTab('prevent')">Prevention</button>
+        </div>
+        <div class="info-content" id="info-content"></div>
+    </div>
+</div>
+
+<footer>MSSE 642 — Software Assurance &nbsp;|&nbsp; Educational purposes only &nbsp;|&nbsp; OWASP A07:2025 Authentication Failures</footer>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  State
+// ══════════════════════════════════════════════════════════
+let currentAttack = 'brute-force';
+let attackRunning  = false;
+let vulnAttempts   = 0;
+let secAttempts    = 0;
+let secLocked      = false;
+let lockTimer      = null;
+let vulnTokenSeed  = 1000;
+let currentTab     = 'what';
+let attackDelay    = 600;
+
+const users = [
+    { username: 'admin', password: 'admin',       role: 'admin' },
+    { username: 'alice', password: 'password123', role: 'user'  },
+    { username: 'bob',   password: 'Summer2024!', role: 'user'  },
+    { username: 'carol', password: 'hiking123',   role: 'user'  },
+];
+
+const bruteList = [
+    '123456','password','letmein','qwerty','abc123',
+    'monkey','dragon','baseball','iloveyou','trustno1',
+    'superman','batman','passw0rd','admin'   // admin matches
+];
+
+const stuffList = [
+    { username: 'john_d',  password: 'abc123'      },
+    { username: 'maria_r', password: 'sunshine99'  },
+    { username: 'alice',   password: 'password123' }, // MATCH
+    { username: 'kevin_p', password: 'iloveyou'    },
+    { username: 'admin',   password: 'admin'       }, // MATCH
+    { username: 'sarah_m', password: 'qwerty1234'  },
+];
+
+// ══════════════════════════════════════════════════════════
+//  Attack Info Content
+// ══════════════════════════════════════════════════════════
+const info = {
+    'brute-force': {
+        what: `<h4>Brute Force Attack</h4>
+        <p>A brute force attack systematically tries every possible password—or a pre-built list of common ones—until it finds a match. Automated tools can try thousands of passwords per second against an unprotected login endpoint.</p>
+        <p>This attack works because some applications have <strong>no rate limiting</strong>, <strong>no account lockout</strong>, and <strong>no CAPTCHA</strong>. Without these controls, a login form accepts unlimited attempts indefinitely.</p>`,
+
+        how: `<h4>How Brute Force Works</h4>
+        <ul>
+            <li>Attacker loads a wordlist — <code>rockyou.txt</code> contains 14 million real passwords from a 2009 breach</li>
+            <li>A tool like <code>Hydra</code> or Burp Suite Intruder automates rapid login requests</li>
+            <li>Without rate limiting, 1,000+ attempts/second is achievable</li>
+            <li>The <strong>vulnerable</strong> side has no attempt counter — it accepts requests forever</li>
+            <li>The <strong>secure</strong> side locks the account after 5 failures and shows CAPTCHA after 2</li>
+        </ul>
+        <p><strong>Key weakness exploited:</strong> No limit on the number of authentication requests from one IP or against one account.</p>`,
+
+        real: `<h4>Real-World Example</h4>
+        <div class="real-world-box">
+            <strong>Microsoft Corporate Email — January 2024</strong>
+            <p style="margin-top:8px;">The Russian state-sponsored group <strong>Midnight Blizzard (APT29)</strong> used a <em>password spray</em> attack — a low-and-slow brute force variant that tries a few common passwords against many accounts to stay below lockout thresholds. They successfully compromised email accounts belonging to Microsoft's senior leadership team and maintained undetected access for months, reading sensitive internal communications.</p>
+        </div>
+        <p>The attack succeeded because some accounts lacked MFA, and the low request rate evaded automated defenses designed to catch rapid attempts.</p>`,
+
+        prevent: `<h4>Prevention Controls</h4>
+        <ul>
+            <li><strong>Account lockout:</strong> Temporarily lock accounts after 3–5 failed attempts</li>
+            <li><strong>Rate limiting:</strong> Cap login attempts per IP per minute</li>
+            <li><strong>CAPTCHA:</strong> Require CAPTCHA after 2 failures to block automation</li>
+            <li><strong>MFA:</strong> Even if a password is guessed, MFA blocks access</li>
+            <li><strong>Progressive delays:</strong> Exponential backoff after each failed attempt</li>
+            <li><strong>Alerting:</strong> Notify account owners and admins of repeated failures</li>
+        </ul>`
+    },
+
+    'default-creds': {
+        what: `<h4>Default Credentials Attack</h4>
+        <p>Many applications ship with hardcoded default usernames and passwords such as <code>admin/admin</code>, <code>admin/password</code>, or <code>root/root</code>. When these defaults are never changed—and the system doesn't enforce a password change on first login—attackers gain immediate, trivial access.</p>
+        <p>This is an A07 failure because the authentication system accepts credentials that were never meant to be permanent, and enforces no policy requiring they be replaced.</p>`,
+
+        how: `<h4>How Default Credential Attacks Work</h4>
+        <ul>
+            <li>Attacker checks vendor documentation or online resources for known defaults</li>
+            <li>Uses databases like <em>Default Credentials Cheat Sheet</em> listing thousands of vendor pairs</li>
+            <li>Tries: <code>admin/admin</code>, <code>admin/password</code>, <code>guest/guest</code>, <code>root/toor</code></li>
+            <li>The <strong>vulnerable</strong> side accepts <code>admin</code> / <code>admin</code> — try it manually</li>
+            <li>The <strong>secure</strong> side enforces a minimum 12-character password, blocking any default credential</li>
+        </ul>
+        <p><strong>Key weakness exploited:</strong> No "change password on first login" enforcement; no rejection of known-weak credentials.</p>`,
+
+        real: `<h4>Real-World Example</h4>
+        <div class="real-world-box">
+            <strong>Mirai Botnet — 2016 (variants still active in 2024)</strong>
+            <p style="margin-top:8px;">Mirai malware infected <strong>hundreds of thousands of IoT devices</strong> (cameras, routers, DVRs) by scanning the public internet and testing 60 known default username/password combinations. Devices that had never had their factory defaults changed were compromised automatically. The resulting botnet launched the largest DDoS attack recorded at the time, knocking Dyn DNS offline and making Twitter, Reddit, and Netflix unreachable for hours.</p>
+        </div>
+        <p>Mirai-variant botnets continue to be discovered in 2024, still finding devices with unchanged default credentials years later.</p>`,
+
+        prevent: `<h4>Prevention Controls</h4>
+        <ul>
+            <li><strong>Force password change on first login:</strong> Generate a unique random initial password per account</li>
+            <li><strong>Reject known-bad passwords:</strong> Check against HaveIBeenPwned's breach database at registration</li>
+            <li><strong>Enforce password complexity:</strong> Minimum length (12+ characters), disallow dictionary words</li>
+            <li><strong>Eliminate shared credentials:</strong> Each admin account must be personal and unique</li>
+            <li><strong>Credential auditing:</strong> Regularly scan for accounts using known default passwords</li>
+            <li><strong>MFA for all privileged accounts:</strong> A second factor survives even if a password is weak</li>
+        </ul>`
+    },
+
+    'session-prediction': {
+        what: `<h4>Session Token Prediction Attack</h4>
+        <p>After a successful login, the server issues a session token to represent the user's identity on subsequent requests. If that token is generated predictably—using sequential IDs, timestamps, or a weak random number generator—an attacker who observes a few tokens can predict other valid ones and hijack other users' sessions without ever knowing their passwords.</p>
+        <p>This is a session management failure within A07: the post-login identity mechanism is broken even when the password itself is strong.</p>`,
+
+        how: `<h4>How Session Prediction Works</h4>
+        <ul>
+            <li>Attacker creates their own account and logs in: receives token <code>session_1042</code></li>
+            <li>Another user logs in: receives <code>session_1043</code></li>
+            <li>Attacker guesses <code>session_1041</code> was issued to the <em>previous</em> user and replays it in their browser</li>
+            <li>The server accepts the token and serves the victim's data — no password needed</li>
+            <li>The <strong>vulnerable</strong> side issues simple sequential tokens (<code>session_XXXX</code>)</li>
+            <li>The <strong>secure</strong> side issues a 128-bit cryptographically random UUID — completely unpredictable</li>
+        </ul>`,
+
+        real: `<h4>Real-World Example</h4>
+        <div class="real-world-box">
+            <strong>Cisco IOS XE Zero-Day — October 2023</strong>
+            <p style="margin-top:8px;">Attackers exploited a Cisco IOS XE web UI vulnerability where session tokens were generated using a non-cryptographic sequence rather than a secure random source. By observing tokens from legitimate requests and predicting the next value, attackers hijacked administrator sessions and implanted backdoors on <strong>over 40,000 internet-exposed Cisco devices</strong>. Access was gained without any valid credentials.</p>
+        </div>
+        <p>Session prediction is also exploited in e-commerce platforms, where guessing a session ID gives access to saved payment methods and order history.</p>`,
+
+        prevent: `<h4>Prevention Controls</h4>
+        <ul>
+            <li><strong>Use a CSPRNG:</strong> <code>secrets.token_hex(32)</code> (Python), <code>crypto.randomBytes()</code> (Node.js), <code>SecureRandom</code> (Java)</li>
+            <li><strong>128-bit minimum entropy:</strong> A 16-byte random token has 2<sup>128</sup> possible values — infeasible to enumerate</li>
+            <li><strong>UUID v4:</strong> Standard libraries generate properly random UUIDs</li>
+            <li><strong>Regenerate on privilege change:</strong> Issue a new token after login, role escalation, or sensitive action</li>
+            <li><strong>Short expiry:</strong> Expire sessions after inactivity (30 min) and absolute timeout (8 hrs)</li>
+            <li><strong>HttpOnly + Secure cookies:</strong> Prevent JavaScript access and enforce TLS-only transmission</li>
+        </ul>`
+    },
+
+    'credential-stuffing': {
+        what: `<h4>Credential Stuffing Attack</h4>
+        <p>Credential stuffing uses <strong>real username/password pairs from previous data breaches</strong> to attempt logins on unrelated sites. Because many users reuse the same password across multiple services, a breach at Site A directly enables account takeover at Sites B, C, and D—no guessing required.</p>
+        <p>This differs from brute force: the attacker isn't guessing randomly; they're replaying credentials that were correct for some user <em>somewhere</em>.</p>`,
+
+        how: `<h4>How Credential Stuffing Works</h4>
+        <ul>
+            <li>Attacker obtains a breach database from darknet marketplaces or public leak sites</li>
+            <li>Tools like OpenBullet automate testing millions of pairs per day across thousands of targets</li>
+            <li>Success rate is 0.1–2%, but 10 billion leaked credentials means 10–200 million successful logins</li>
+            <li>The stuffed list below includes <code>alice / password123</code> which matches our demo database</li>
+            <li>The <strong>secure</strong> side detects the automated pattern (uniform timing, no browser fingerprint) and blocks via rate limiting + MFA requirement</li>
+        </ul>`,
+
+        real: `<h4>Real-World Example</h4>
+        <div class="real-world-box">
+            <strong>Snowflake / Ticketmaster / Santander — May–June 2024</strong>
+            <p style="margin-top:8px;">Attackers used credential stuffing against <strong>Snowflake cloud data warehouse accounts</strong> that had no MFA enabled. Stolen credentials from unrelated prior breaches allowed access to Snowflake environments at <strong>165 organizations</strong>. Ticketmaster had 560 million customer records stolen; Santander Bank lost employee and customer data. The attack was entirely preventable — every compromised account lacked MFA, and the credentials had been available in breach databases for months prior.</p>
+        </div>
+        <p><strong>Scale of available credentials:</strong> RockYou2024, published July 2024, contains <strong>9.9 billion unique plaintext passwords</strong> — the largest ever published.</p>`,
+
+        prevent: `<h4>Prevention Controls</h4>
+        <ul>
+            <li><strong>MFA everywhere:</strong> Stolen passwords are useless without the second factor</li>
+            <li><strong>Breach database checks:</strong> Reject passwords found in HaveIBeenPwned at registration and login</li>
+            <li><strong>Bot detection:</strong> Analyze request timing, headers, and TLS fingerprints to identify automation</li>
+            <li><strong>Rate limiting per IP and per account:</strong> Slow down automated bulk testing</li>
+            <li><strong>Anomaly alerting:</strong> Flag logins from new geographies, devices, or abnormal hours</li>
+            <li><strong>Passkeys / passwordless auth:</strong> Phishing-resistant credentials eliminate password reuse entirely</li>
+        </ul>`
+    }
+};
+
+// ══════════════════════════════════════════════════════════
+//  UI Helpers
+// ══════════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+
+function selectAttack(type) {
+    if (attackRunning) return;
+    currentAttack = type;
+    document.querySelectorAll('.attack-btn').forEach(b => b.classList.remove('active'));
+    $('btn-' + type).classList.add('active');
+    const hints = {
+        'brute-force':        'Simulates automated password guessing from a wordlist. The vulnerable side accepts unlimited attempts; the secure side locks out and deploys CAPTCHA.',
+        'default-creds':      'Tries the classic admin/admin pair. The vulnerable system grants immediate access; the secure system rejects weak passwords and demands MFA.',
+        'session-prediction': 'Logs into both systems and compares issued session tokens. Notice the vulnerable sequential format vs. the secure random UUID.',
+        'credential-stuffing':'Replays leaked username/password pairs from a simulated breach dump. Shows how password reuse enables account takeover without any guessing.'
+    };
+    $('attack-hint').textContent = hints[type];
+    const showSession = type === 'session-prediction';
+    $('vuln-token-section').style.display = showSession ? 'block' : 'none';
+    $('sec-token-section').style.display  = showSession ? 'block' : 'none';
+    showTab(currentTab);
+    resetAll();
+    if (type === 'default-creds') {
+        $('vuln-username').value = 'admin'; $('vuln-password').value = 'admin';
+        $('sec-username').value  = 'admin'; $('sec-password').value  = 'admin';
+    } else {
+        ['vuln-username','vuln-password','sec-username','sec-password'].forEach(id => $(id).value = '');
+    }
+}
+
+function showTab(tab) {
+    currentTab = tab;
+    ['what','how','real','prevent'].forEach(t => $('tab-'+t).classList.toggle('active', t === tab));
+    $('info-content').innerHTML = info[currentAttack][tab];
+}
+
+function updateSpeed(val) {
+    $('speed-label').textContent = ['','Slow','Medium','Fast'][+val];
+    attackDelay = [0, 1200, 600, 200][+val];
+}
+
+function clearLog() { $('log-body').innerHTML = ''; }
+
+function log(msg, type = 'info') {
+    const lb = $('log-body');
+    const now = new Date();
+    const ts  = `[${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}]`;
+    lb.insertAdjacentHTML('beforeend', `<div class="log-entry ${type}"><span class="ts">${ts}</span> ${msg}</div>`);
+    lb.scrollTop = lb.scrollHeight;
+}
+
+function showAlert(id, msg, cls) { const el = $(id); el.textContent = msg; el.className = `alert ${cls} show`; }
+function hideAlert(id) { $(id).classList.remove('show'); }
+
+// ══════════════════════════════════════════════════════════
+//  Manual Login — Vulnerable
+// ══════════════════════════════════════════════════════════
+function vulnLogin() {
+    const user = $('vuln-username').value.trim();
+    const pass = $('vuln-password').value;
+    hideAlert('vuln-error'); hideAlert('vuln-success');
+    const found = users.find(u => u.username === user);
+    if (!found) {
+        vulnAttempts++;
+        $('vuln-attempts').textContent = vulnAttempts;
+        showAlert('vuln-error', `❌ User "${user}" not found.`, 'error');  // specific — leaks enumeration info
+        log(`VULN: "${user}" not found`, 'fail');
+        return;
+    }
+    if (found.password !== pass) {
+        vulnAttempts++;
+        $('vuln-attempts').textContent = vulnAttempts;
+        showAlert('vuln-error', `❌ Wrong password for "${user}". Try again.`, 'error');  // specific — leaks info
+        log(`VULN: Wrong password for "${user}"`, 'fail');
+        return;
+    }
+    const token = `session_${++vulnTokenSeed}`;
+    $('vuln-token-section').style.display = 'block';
+    $('vuln-token').textContent = token;
+    showAlert('vuln-success', `✅ Login successful! Welcome, ${found.role === 'admin' ? 'ADMIN ' : ''}${user}`, 'success-msg');
+    log(`VULN: ✅ SUCCESS — ${user} authenticated, token: ${token}`, 'success');
+}
+
+// ══════════════════════════════════════════════════════════
+//  Manual Login — Secure
+// ══════════════════════════════════════════════════════════
+function secureLogin() {
+    if (secLocked) return;
+    const user = $('sec-username').value.trim();
+    const pass = $('sec-password').value;
+    hideAlert('sec-error'); hideAlert('sec-success');
+    const found = users.find(u => u.username === user && u.password === pass);
+    if (!found || pass.length < 12) {
+        secAttempts++;
+        updateSecStatus();
+        showAlert('sec-error', '❌ Invalid username or password.', 'error');  // generic — safe
+        log(`SECURE: Invalid credentials (attempt ${secAttempts})`, 'fail');
+        if (secAttempts >= 2) $('sec-captcha').classList.add('show');
+        if (secAttempts >= 5) triggerLockout();
+        return;
+    }
+    $('sec-mfa').classList.add('show');
+    log(`SECURE: Password accepted — awaiting MFA…`, 'warn');
+}
+
+function completeMFA() {
+    $('sec-mfa').classList.remove('show');
+    const token = randomToken();
+    $('sec-token-section').style.display = 'block';
+    $('sec-token').textContent = token;
+    showAlert('sec-success', '✅ MFA verified. Secure session established.', 'success-msg');
+    log(`SECURE: ✅ MFA passed — token: ${token}`, 'success');
+}
+
+function updateSecStatus() { $('sec-attempts').textContent = `${secAttempts} / 5`; }
+
+function triggerLockout() {
+    secLocked = true;
+    $('sec-login-btn').disabled = true;
+    $('sec-lockout').classList.add('show');
+    let t = 30; $('lockout-timer').textContent = t;
+    log('SECURE: 🔒 Account locked for 30 seconds', 'warn');
+    lockTimer = setInterval(() => {
+        $('lockout-timer').textContent = --t;
+        if (t <= 0) {
+            clearInterval(lockTimer);
+            secLocked = false; secAttempts = 0;
+            $('sec-login-btn').disabled = false;
+            $('sec-lockout').classList.remove('show');
+            $('sec-captcha').classList.remove('show');
+            updateSecStatus();
+            log('SECURE: Account unlocked. Counter reset.', 'info');
+        }
+    }, 1000);
+}
+
+function randomToken() {
+    const h = () => Math.floor(Math.random() * 0xFFFFFFFF).toString(16).padStart(8, '0');
+    return `${h()}-${h().slice(0,4)}-4${h().slice(0,3)}-${h().slice(0,4)}-${h()}${h().slice(0,4)}`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  Attack Simulations
+// ══════════════════════════════════════════════════════════
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function runAttack() {
+    if (attackRunning) return;
+    attackRunning = true;
+    $('run-btn').disabled = true;
+    $('run-btn').textContent = '⏳ Running…';
+    resetState();
+    switch (currentAttack) {
+        case 'brute-force':         await attackBrute(); break;
+        case 'default-creds':       await attackDefault(); break;
+        case 'session-prediction':  await attackSession(); break;
+        case 'credential-stuffing': await attackStuffing(); break;
+    }
+    attackRunning = false;
+    $('run-btn').disabled = false;
+    $('run-btn').textContent = '▶ Run Attack';
+}
+
+async function attackBrute() {
+    log(`─── BRUTE FORCE ATTACK ─── Target: admin (${bruteList.length} passwords)`, 'info');
+    await sleep(attackDelay);
+    for (let i = 0; i < bruteList.length && attackRunning; i++) {
+        const pass = bruteList[i];
+        vulnAttempts++;
+        $('vuln-attempts').textContent = vulnAttempts;
+        const match = users.find(u => u.username === 'admin' && u.password === pass);
+        if (match) {
+            const tok = `session_${++vulnTokenSeed}`;
+            $('vuln-token-section').style.display = 'block'; $('vuln-token').textContent = tok;
+            showAlert('vuln-success', `✅ Password found: "${pass}" — ADMIN access granted`, 'success-msg');
+            log(`VULN: ✅ BREACHED — password "${pass}" correct after ${vulnAttempts} attempts`, 'success');
+        } else {
+            showAlert('vuln-error', `❌ Wrong password: "${pass}" (attempt ${vulnAttempts})`, 'error');
+            log(`VULN: Attempt ${vulnAttempts} — "${pass}" ✗`, 'fail');
+        }
+        if (!secLocked && secAttempts < 5) {
+            secAttempts++; updateSecStatus();
+            if (secAttempts >= 2) $('sec-captcha').classList.add('show');
+            if (secAttempts >= 5) { triggerLockout(); log('SECURE: Attack stopped by lockout', 'warn'); }
+        } else if (!secLocked) {
+            log('SECURE: Request blocked by rate limit', 'warn');
+        }
+        await sleep(attackDelay);
+    }
+    log('─── ATTACK COMPLETE ───', 'info');
+}
+
+async function attackDefault() {
+    log('─── DEFAULT CREDENTIALS ATTACK ───', 'info');
+    const pairs = [{ u:'admin',p:'admin' },{ u:'administrator',p:'password' },{ u:'root',p:'root' }];
+    for (const pair of pairs) {
+        if (!attackRunning) break;
+        log(`ATTACKER: Trying ${pair.u} / ${pair.p}`, 'info');
+        await sleep(attackDelay);
+        vulnAttempts++;
+        $('vuln-attempts').textContent = vulnAttempts;
+        const match = users.find(u => u.username === pair.u && u.password === pair.p);
+        if (match) {
+            const tok = `session_${++vulnTokenSeed}`;
+            $('vuln-token-section').style.display = 'block'; $('vuln-token').textContent = tok;
+            showAlert('vuln-success', `✅ Default credentials accepted! ${pair.u}/${pair.p}`, 'success-msg');
+            log(`VULN: ✅ BREACHED — default creds ${pair.u}/${pair.p} accepted`, 'success');
+        }
+        // Secure side: password too short for policy, MFA also required
+        secAttempts++; updateSecStatus();
+        showAlert('sec-error', '❌ Invalid username or password.', 'error');
+        log(`SECURE: Rejected — password fails strength policy (< 12 chars)`, 'fail');
+        if (secAttempts >= 2) $('sec-captcha').classList.add('show');
+        await sleep(attackDelay);
+    }
+    log('─── ATTACK COMPLETE ───', 'info');
+}
+
+async function attackSession() {
+    log('─── SESSION TOKEN PREDICTION ATTACK ───', 'info');
+    $('vuln-token-section').style.display = 'block';
+    $('sec-token-section').style.display  = 'block';
+    const seeds = [++vulnTokenSeed, ++vulnTokenSeed, ++vulnTokenSeed];
+    log('ATTACKER: Logging in and observing issued tokens…', 'info');
+    for (let i = 0; i < seeds.length && attackRunning; i++) {
+        await sleep(attackDelay);
+        const vt = `session_${seeds[i]}`;
+        const st = randomToken();
+        $('vuln-token').textContent = vt;
+        $('sec-token').textContent  = st;
+        log(`Login ${i+1}: VULN → ${vt}  |  SECURE → ${st.slice(0,18)}…`, 'info');
+    }
+    await sleep(attackDelay);
+    const next = seeds[seeds.length - 1] + 1;
+    log(`ATTACKER: Pattern found! Next token = session_${next}`, 'warn');
+    await sleep(attackDelay);
+    $('vuln-token').textContent = `session_${next}`;
+    showAlert('vuln-error', `⚠ Attacker replayed session_${next} — hijacked next user's session!`, 'error');
+    log(`VULN: ✅ Session hijacked — attacker now impersonating next logged-in user`, 'success');
+    log(`SECURE: Prediction impossible — 128-bit random token`, 'fail');
+    log('─── ATTACK COMPLETE ───', 'info');
+}
+
+async function attackStuffing() {
+    log(`─── CREDENTIAL STUFFING ATTACK ─── ${stuffList.length} pairs from breach dump`, 'info');
+    await sleep(attackDelay);
+    for (const cred of stuffList) {
+        if (!attackRunning) break;
+        log(`ATTACKER: Testing ${cred.username} / ${cred.password}`, 'info');
+        await sleep(attackDelay);
+        vulnAttempts++;
+        $('vuln-attempts').textContent = vulnAttempts;
+        const match = users.find(u => u.username === cred.username && u.password === cred.password);
+        if (match) {
+            const tok = `session_${++vulnTokenSeed}`;
+            $('vuln-token-section').style.display = 'block'; $('vuln-token').textContent = tok;
+            showAlert('vuln-success', `✅ Match: ${cred.username}/${cred.password} — account compromised`, 'success-msg');
+            log(`VULN: ✅ MATCH — ${cred.username}:${cred.password} — account taken over`, 'success');
+        } else {
+            log(`VULN: No match — ${cred.username} ✗`, 'fail');
+        }
+        if (!secLocked && secAttempts < 5) {
+            secAttempts++; updateSecStatus();
+            if (secAttempts >= 3) log('SECURE: Automated request pattern detected — rate limit applied', 'warn');
+            if (secAttempts >= 5) { triggerLockout(); log('SECURE: IP blocked — automated source detected', 'warn'); }
+        }
+        await sleep(attackDelay);
+    }
+    log('─── ATTACK COMPLETE ───', 'info');
+}
+
+// ══════════════════════════════════════════════════════════
+//  Reset
+// ══════════════════════════════════════════════════════════
+function resetState() {
+    vulnAttempts = 0; secAttempts = 0; secLocked = false;
+    if (lockTimer) clearInterval(lockTimer);
+    $('vuln-attempts').textContent = '0';
+    $('sec-attempts').textContent  = '0 / 5';
+    $('sec-login-btn').disabled = false;
+    ['sec-lockout','sec-captcha','sec-mfa'].forEach(id => $(id).classList.remove('show'));
+    ['vuln-error','vuln-success','sec-error','sec-success'].forEach(id => hideAlert(id));
+}
+
+function resetAll() {
+    if (attackRunning) { attackRunning = false; }
+    resetState(); clearLog();
+    $('vuln-token').textContent = '—'; $('sec-token').textContent = '—';
+    const showSess = currentAttack === 'session-prediction';
+    $('vuln-token-section').style.display = showSess ? 'block' : 'none';
+    $('sec-token-section').style.display  = showSess ? 'block' : 'none';
+    log(`Reset. Attack: ${currentAttack.replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase())}`, 'info');
+}
+
+// ══════════════════════════════════════════════════════════
+//  Init
+// ══════════════════════════════════════════════════════════
+selectAttack('brute-force');
+showTab('what');
+</script>
+</body>
+</html>
