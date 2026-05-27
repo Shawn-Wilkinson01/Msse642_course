@@ -1,0 +1,212 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: simulator
+    description: Login security simulator operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /simulator/login/vulnerable:
+    post:
+      operationId: vulnerableLogin
+      tags: [simulator]
+      summary: Vulnerable login endpoint (SQL injection risk)
+      description: Login endpoint that concatenates user input directly into a SQL query string and stores passwords as plain text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginAttemptInput"
+      responses:
+        "200":
+          description: Login attempt result (success or failure)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+
+  /simulator/login/secure:
+    post:
+      operationId: secureLogin
+      tags: [simulator]
+      summary: Secure login endpoint (parameterized queries + bcrypt + rate limiting)
+      description: Login endpoint using parameterized queries, bcrypt password hashing, and rate limiting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginAttemptInput"
+      responses:
+        "200":
+          description: Login attempt result (success or failure)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResult"
+
+  /simulator/users:
+    get:
+      operationId: getSimulatorUsers
+      tags: [simulator]
+      summary: Get all simulator users showing plaintext vs hashed passwords
+      responses:
+        "200":
+          description: List of simulator users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SimUser"
+
+  /simulator/logs:
+    get:
+      operationId: getSimulatorLogs
+      tags: [simulator]
+      summary: Get all login attempt logs
+      responses:
+        "200":
+          description: List of login attempt logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttemptLog"
+
+  /simulator/reset:
+    post:
+      operationId: resetSimulator
+      tags: [simulator]
+      summary: Reset simulator state (clears logs, resets rate limits)
+      responses:
+        "200":
+          description: Reset result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetResult"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    LoginAttemptInput:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginResult:
+      type: object
+      required: [success, message, sqlQuery, explanation, endpoint]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        sqlQuery:
+          type: string
+          description: The actual SQL query that was executed
+        explanation:
+          type: string
+          description: Detailed explanation of what happened and why
+        endpoint:
+          type: string
+          description: Which endpoint was called (vulnerable or secure)
+        attackType:
+          type: ["string", "null"]
+          description: Detected attack type (e.g. sql_injection, brute_force)
+        rateLimited:
+          type: ["boolean", "null"]
+          description: Whether this attempt was rate limited
+        attemptsRemaining:
+          type: ["integer", "null"]
+          description: Remaining attempts before rate limit kicks in
+
+    SimUser:
+      type: object
+      required: [id, username, passwordPlain, passwordHash, role]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        passwordPlain:
+          type: string
+          description: Plain text password (as stored in vulnerable DB)
+        passwordHash:
+          type: string
+          description: Bcrypt hashed password (as stored in secure DB)
+        role:
+          type: string
+
+    AttemptLog:
+      type: object
+      required: [id, endpoint, username, password, success, timestamp]
+      properties:
+        id:
+          type: integer
+        endpoint:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        success:
+          type: boolean
+        timestamp:
+          type: string
+        attackType:
+          type: ["string", "null"]
+        sqlQuery:
+          type: string
+        explanation:
+          type: string
+
+    ResetResult:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
