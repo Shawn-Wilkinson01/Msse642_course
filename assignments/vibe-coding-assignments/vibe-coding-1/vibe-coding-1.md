@@ -1,7 +1,7 @@
 # Vibe Coding Assignment #1: Authentication Failures
 
 **Course:** MSSE 642 – Software Assurance  
-**Author:** Shawn Wilkinson  
+**Authors:** Abdullah Bahir, Emad Fattah, Shawn Wilkinson  
 **Date:** May 2026  
 **OWASP Category:** A07:2025 — Authentication Failures
 
@@ -124,6 +124,38 @@ All three breaches share a common thread: **valid credentials + no MFA = complet
 **Issue:** A lockout that counts down in real time is a meaningful demonstration, but if it's too long (30 real seconds) it interrupts the lesson flow. Too short and it trivializes the protection.
 
 **Solution:** The timer is visible and real (30 seconds) to make the point that the account is genuinely inaccessible — the attacker cannot simply wait a moment and retry. The speed slider lets the student run the attack fast to trigger the lockout quickly, then observe it naturally without speeding anything up.
+
+---
+
+## Screenshots
+
+### Landing Page
+
+![Landing Page](images/01-landing-page.png)
+
+### Brute Force Attack
+
+| Idle | Running |
+|------|---------|
+| ![Brute Force Idle](images/02-brute-force.png) | ![Brute Force Running](images/02-brute-force-running.png) |
+
+### Default Credentials Attack
+
+| Idle | Running |
+|------|---------|
+| ![Default Credentials Idle](images/03-default-credentials.png) | ![Default Credentials Running](images/03-default-credentials-running.png) |
+
+### Session Prediction Attack
+
+| Idle | Running |
+|------|---------|
+| ![Session Prediction Idle](images/04-session-prediction.png) | ![Session Prediction Running](images/04-session-prediction-running.png) |
+
+### Credential Stuffing Attack
+
+| Idle | Running |
+|------|---------|
+| ![Credential Stuffing Idle](images/05-credential-stuffing.png) | ![Credential Stuffing Running](images/05-credential-stuffing-running.png) |
 
 ---
 
