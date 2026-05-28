@@ -127,6 +127,38 @@ All three breaches share a common thread: **valid credentials + no MFA = complet
 
 ---
 
+## Screenshots
+
+### Landing Page
+
+![Landing Page](images/01-landing-page.png)
+
+### Brute Force Attack
+
+| Idle | Running |
+|------|---------|
+| ![Brute Force Idle](images/02-brute-force.png) | ![Brute Force Running](images/02-brute-force-running.png) |
+
+### Default Credentials Attack
+
+| Idle | Running |
+|------|---------|
+| ![Default Credentials Idle](images/03-default-credentials.png) | ![Default Credentials Running](images/03-default-credentials-running.png) |
+
+### Session Prediction Attack
+
+| Idle | Running |
+|------|---------|
+| ![Session Prediction Idle](images/04-session-prediction.png) | ![Session Prediction Running](images/04-session-prediction-running.png) |
+
+### Credential Stuffing Attack
+
+| Idle | Running |
+|------|---------|
+| ![Credential Stuffing Idle](images/05-credential-stuffing.png) | ![Credential Stuffing Running](images/05-credential-stuffing-running.png) |
+
+---
+
 ## How to Run the App
 
 Open `app.html` in any modern web browser. No server, installation, or internet connection required.
