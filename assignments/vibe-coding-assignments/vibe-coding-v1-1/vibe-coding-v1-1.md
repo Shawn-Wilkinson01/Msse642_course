@@ -1,7 +1,7 @@
 # Vibe Coding Assignment #1 (v1.1): Authentication Failures — Auth-Explorer
 
 **Course:** MSSE 642 – Software Assurance  
-**Author:** Shawn Wilkinson  
+**Authors:** Shawn Wilkinson, Emad Fattah, Abdullah Bahir  
 **Date:** May 2026  
 **OWASP Category:** A07:2025 — Authentication Failures (with A03:2025 Injection)
 
