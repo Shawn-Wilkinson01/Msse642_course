@@ -159,15 +159,33 @@ Then open `http://localhost:8080` in a browser. The SQLite database is created a
 
 ## Screenshots
 
-Screenshots to be added after capturing from the running app.
+### Home Page — SQL Injection Explained
 
-| File | Description |
-| ---- | ----------- |
-| `images/home-page.png` | Landing page with SQL injection explanation |
-| `images/normal-search.png` | Normal username search — both panels return same result |
-| `images/or-injection.png` | `' OR '1'='1` attack — vulnerable side returns all 5 users |
-| `images/union-attack.png` | UNION SELECT — password column leaked into email column |
-| `images/admin-bypass.png` | `admin'--` — admin user returned by comment truncation |
+![Home page showing the SQL injection explanation, real-world breach example, and navigation to the live demo](images/home-page.png)
+
+### Normal Search — Baseline Behavior
+
+![Normal search for 'alice' returning one matching row on both the vulnerable and secure panels](images/normal-search.png)
+
+Both panels return the same single row when the input is a plain username with no injection characters. This is the expected baseline.
+
+### OR Injection — Full Table Dump
+
+![OR injection showing BREACHED status on the vulnerable side with all 5 users returned, and SAFE with 0 rows on the secure side](images/or-injection.png)
+
+The payload `' OR '1'='1` closes the string early and appends a condition that is always true. The vulnerable side returns all 5 users; the secure side returns 0 rows because the entire payload is treated as a literal string.
+
+### UNION SELECT — Password Column Leaked
+
+![UNION SELECT attack showing passwords appearing in the email column on the vulnerable side, highlighted in red](images/union-attack.png)
+
+The UNION attack appends a second SELECT that pulls the `password` column into the position normally occupied by `email`. Leaked values are highlighted in red. The secure side again returns 0 rows.
+
+### Admin Bypass — Comment Truncation
+
+![admin'-- attack returning the admin user on the vulnerable side via SQL comment truncation](images/admin-bypass.png)
+
+`admin'--` closes the username string and uses `--` to comment out the rest of the query. The vulnerable endpoint returns the admin user record directly. The secure endpoint finds no user with that literal string as a username.
 
 ---
 
