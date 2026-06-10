@@ -1,7 +1,7 @@
 # Vibe Coding Assignment 2: OWASP A05 Injection
 
 **Course:** MSSE 642 – Software Assurance  
-**Author:** Shawn Wilkinson  
+**Authors:** Abdullah Bahir, Emad Fattah, Shawn Wilkinson  
 **Date:** June 2026  
 **OWASP Category:** A05:2025 — Injection
 
