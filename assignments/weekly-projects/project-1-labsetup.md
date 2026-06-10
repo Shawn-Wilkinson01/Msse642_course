@@ -1,7 +1,7 @@
 # Assignment #1: Penetration Testing Lab Setup
 
 **Course:** MSSE 642 – Software Assurance  
-**Author:** Shawn Wilkinson  
+**Authors:** Abdullah Bahir, Emad Fattah, Shawn Wilkinson  
 **Date:** May 2026  
 ---
 
@@ -121,7 +121,7 @@ Kali Linux was downloaded from the [official Kali website](https://www.kali.org/
 
 ![Kali Linux Running](images/02-kali-logged-in.png)
 
-> *The screenshot shows the Kali Linux 2026.1 desktop environment with a terminal open, confirming a successful login as user `swmsse642`.*
+> *The screenshot shows the Kali Linux 2026.1 desktop environment with a terminal open, confirming a successful login as user `kali`.*
 
 ---
 
