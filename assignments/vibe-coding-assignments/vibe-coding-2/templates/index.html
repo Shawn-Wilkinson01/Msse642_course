@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A05:2025 — SQL Injection Interactive Demo</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0d1117; color: #e6edf3; min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        header {
+            background: #161b22; border-bottom: 1px solid #30363d;
+            padding: 14px 24px; display: flex; align-items: center; gap: 14px;
+        }
+        .owasp-badge {
+            background: #b94f00; color: #fff; font-weight: 700;
+            font-size: 13px; padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+        }
+        header h1 { font-size: 17px; font-weight: 600; }
+        header p  { font-size: 12px; color: #8b949e; margin-top: 2px; }
+
+        /* ── Nav ── */
+        nav {
+            background: #161b22; border-bottom: 1px solid #30363d;
+            padding: 0 24px; display: flex; gap: 0;
+        }
+        .nav-link {
+            padding: 10px 18px; font-size: 13px; font-weight: 500; color: #8b949e;
+            cursor: pointer; border-bottom: 2px solid transparent;
+            transition: all 0.18s; user-select: none;
+        }
+        .nav-link:hover { color: #e6edf3; }
+        .nav-link.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+
+        /* ── Sections ── */
+        section { display: none; padding: 24px; max-width: 1400px; margin: 0 auto; }
+        section.active { display: block; }
+
+        /* ── Info cards ── */
+        .info-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px; margin-bottom: 24px;
+        }
+        .info-card {
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; padding: 18px;
+        }
+        .info-card h3 { font-size: 14px; font-weight: 600; color: #58a6ff; margin-bottom: 10px; }
+        .info-card p, .info-card li {
+            font-size: 13px; color: #c9d1d9; line-height: 1.65; margin-bottom: 6px;
+        }
+        .info-card ul { margin-left: 16px; }
+        .info-card code {
+            background: #0d1117; border: 1px solid #30363d;
+            padding: 1px 5px; border-radius: 4px; font-size: 11px;
+            color: #f0883e; font-family: 'Courier New', monospace;
+        }
+        .danger-box {
+            background: rgba(218,54,51,0.08); border: 1px solid rgba(218,54,51,0.35);
+            border-radius: 6px; padding: 14px; margin-top: 16px;
+        }
+        .danger-box h4 { color: #f85149; font-size: 13px; margin-bottom: 8px; }
+        .danger-box p  { font-size: 13px; color: #c9d1d9; line-height: 1.6; }
+        .safe-box {
+            background: rgba(63,185,80,0.08); border: 1px solid rgba(63,185,80,0.35);
+            border-radius: 6px; padding: 14px; margin-top: 12px;
+        }
+        .safe-box h4 { color: #3fb950; font-size: 13px; margin-bottom: 8px; }
+        .safe-box p  { font-size: 13px; color: #c9d1d9; line-height: 1.6; }
+
+        /* ── Demo section ── */
+        .search-area {
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; padding: 18px; margin-bottom: 16px;
+        }
+        .search-area h3 { font-size: 13px; font-weight: 600; color: #8b949e; margin-bottom: 12px; }
+        .search-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+        .search-input {
+            flex: 1; background: #0d1117; border: 1px solid #30363d;
+            color: #e6edf3; padding: 9px 14px; border-radius: 6px; font-size: 14px;
+            font-family: 'Courier New', monospace;
+        }
+        .search-input:focus { outline: none; border-color: #58a6ff; }
+        .btn-search {
+            background: #1f6feb; color: #fff; border: none;
+            padding: 9px 20px; border-radius: 6px; font-size: 13px;
+            font-weight: 600; cursor: pointer; transition: background 0.18s; white-space: nowrap;
+        }
+        .btn-search:hover { background: #388bfd; }
+        .attack-label { font-size: 12px; color: #8b949e; margin-bottom: 7px; }
+        .attack-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .attack-btn {
+            background: #21262d; border: 1px solid #da3633; color: #f85149;
+            padding: 6px 12px; border-radius: 6px; cursor: pointer;
+            font-size: 11px; font-family: 'Courier New', monospace;
+            transition: all 0.18s; white-space: nowrap;
+        }
+        .attack-btn:hover { background: rgba(218,54,51,0.15); }
+
+        /* ── Side-by-side panels ── */
+        .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .panel {
+            background: #0d1117; border: 1px solid; border-radius: 8px; overflow: hidden;
+        }
+        .panel.vuln { border-color: #da3633; }
+        .panel.secure { border-color: #3fb950; }
+        .panel-header {
+            padding: 10px 16px; display: flex; align-items: center;
+            gap: 8px; font-weight: 600; font-size: 13px;
+        }
+        .panel.vuln   .panel-header { background: rgba(218,54,51,0.12); color: #f85149; border-bottom: 1px solid #da3633; }
+        .panel.secure .panel-header { background: rgba(63,185,80,0.12);  color: #3fb950; border-bottom: 1px solid #3fb950; }
+        .panel-body { padding: 16px; }
+
+        /* SQL display */
+        .sql-block {
+            background: #0d1117; border: 1px solid #30363d;
+            border-radius: 6px; padding: 12px; margin-bottom: 12px;
+            font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.7;
+            word-break: break-all;
+        }
+        .sql-label { font-size: 11px; color: #8b949e; margin-bottom: 5px; font-weight: 600; }
+        .sql-text  { color: #79c0ff; }
+        .sql-inject { color: #f85149; background: rgba(218,54,51,0.18); padding: 1px 3px; border-radius: 3px; }
+        .sql-param  { color: #d2a8ff; }
+        .param-row  { display: flex; gap: 8px; align-items: baseline; font-size: 12px; margin-bottom: 12px; }
+        .param-label { color: #8b949e; font-size: 11px; }
+        .param-value { color: #d2a8ff; font-family: 'Courier New', monospace; font-size: 12px; }
+
+        /* Results table */
+        .results-label { font-size: 11px; color: #8b949e; font-weight: 600; margin-bottom: 6px; }
+        .results-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .results-table th {
+            background: #161b22; color: #8b949e; font-weight: 600;
+            padding: 6px 10px; text-align: left; border-bottom: 1px solid #30363d;
+        }
+        .results-table td {
+            padding: 6px 10px; border-bottom: 1px solid #21262d; color: #c9d1d9;
+            font-family: 'Courier New', monospace;
+        }
+        .results-table tr:last-child td { border-bottom: none; }
+        .results-table tr:hover td { background: #161b22; }
+        .admin-badge {
+            background: #b94f00; color: #fff; font-size: 10px;
+            padding: 1px 5px; border-radius: 4px; font-family: sans-serif;
+        }
+        .leaked-cell { color: #f85149 !important; }
+
+        /* Status badge */
+        .status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+        .status-badge {
+            font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px;
+        }
+        .status-badge.breached { background: rgba(218,54,51,0.2); color: #f85149; border: 1px solid #da3633; }
+        .status-badge.safe     { background: rgba(63,185,80,0.2);  color: #3fb950; border: 1px solid #3fb950; }
+        .status-badge.idle     { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+        .status-badge.error    { background: rgba(210,153,34,0.2); color: #d29922; border: 1px solid #d29922; }
+        .count-label { font-size: 12px; color: #8b949e; }
+
+        /* Explanation card */
+        .explanation {
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; padding: 18px;
+        }
+        .explanation h3 { font-size: 13px; font-weight: 600; color: #8b949e; margin-bottom: 12px; }
+        .explanation p  { font-size: 13px; color: #c9d1d9; line-height: 1.65; margin-bottom: 8px; }
+        .explanation strong { color: #e6edf3; }
+        .explanation code {
+            background: #0d1117; border: 1px solid #30363d;
+            padding: 1px 5px; border-radius: 4px; font-size: 11px;
+            color: #f0883e; font-family: 'Courier New', monospace;
+        }
+        .expl-vuln  { color: #f85149; }
+        .expl-safe  { color: #3fb950; }
+
+        .empty-state { color: #484f58; font-size: 13px; padding: 12px 0; text-align: center; }
+
+        footer {
+            background: #161b22; border-top: 1px solid #30363d;
+            padding: 12px 24px; text-align: center; font-size: 12px; color: #484f58; margin-top: 32px;
+        }
+
+        @media (max-width: 800px) {
+            .comparison, .info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div><span class="owasp-badge">A05:2025</span></div>
+    <div>
+        <h1>SQL Injection — Interactive Security Demo</h1>
+        <p>See the difference between a vulnerable search and a parameterized query in real time</p>
+    </div>
+</header>
+
+<nav>
+    <div class="nav-link active" onclick="showSection('home')">Home</div>
+    <div class="nav-link" onclick="showSection('demo')">Live Demo</div>
+</nav>
+
+<!-- ══════════════════════════════════════ HOME ══════════════════════════════════════ -->
+<section id="home" class="active">
+
+    <div class="info-grid">
+
+        <div class="info-card">
+            <h3>What Is SQL Injection?</h3>
+            <p>SQL injection is an attack where an attacker inserts malicious SQL code into an input field that is then executed by the database. The attack works because the application builds SQL queries by pasting user input directly into a query string, letting the attacker change the <em>structure</em> of the query, not just its data.</p>
+            <p>SQL injection has topped the OWASP list for over a decade because it is easy to exploit, often devastating in impact, and still shockingly common in production systems.</p>
+        </div>
+
+        <div class="info-card">
+            <h3>Why Is It Dangerous?</h3>
+            <ul>
+                <li><strong>Authentication bypass</strong> — log in as any user without a password</li>
+                <li><strong>Data exfiltration</strong> — dump entire tables including passwords, emails, PII</li>
+                <li><strong>Privilege escalation</strong> — extract admin credentials or session tokens</li>
+                <li><strong>Data modification</strong> — UPDATE or DELETE records</li>
+                <li><strong>Server compromise</strong> — on some databases, read/write OS files or execute commands</li>
+            </ul>
+        </div>
+
+        <div class="info-card">
+            <h3>What Attackers Target</h3>
+            <ul>
+                <li>Login forms (username / password fields)</li>
+                <li>Search bars and filter inputs</li>
+                <li>URL parameters (<code>?id=5</code>, <code>?user=alice</code>)</li>
+                <li>REST API request bodies (JSON / form data)</li>
+                <li>HTTP headers (User-Agent, Referer, Cookie)</li>
+            </ul>
+            <p style="margin-top:8px;">Anywhere user input eventually touches a database is a potential injection point.</p>
+        </div>
+
+        <div class="info-card">
+            <h3>How Parameterized Queries Prevent It</h3>
+            <p>A <strong>parameterized query</strong> separates the SQL structure from the data. The database receives two things: the fixed query template (<code>WHERE username = ?</code>) and the user value as a separate bound parameter.</p>
+            <p>The database engine then treats the parameter as <em>pure data</em> — it is never interpreted as SQL syntax. Even if the input contains quotes, hyphens, or SQL keywords, they cannot alter the query logic.</p>
+            <div class="safe-box">
+                <h4>Safe pattern (Python sqlite3)</h4>
+                <p><code>cursor.execute("SELECT … WHERE username = ?", (user_input,))</code></p>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="danger-box">
+        <h4>Real-World Example — Fortra GoAnywhere MFT (2023)</h4>
+        <p>In early 2023, the Cl0p ransomware gang exploited a zero-day SQL injection vulnerability (CVE-2023-0669) in Fortra's GoAnywhere managed file transfer software. The vulnerability allowed unauthenticated remote code execution via a crafted SQL injection payload in the administrative console. Over <strong>130 organizations</strong> were compromised within two weeks — including Community Health Systems (1 million patient records), Hitachi Energy, Procter &amp; Gamble, and City of Toronto. The attack succeeded because one injectable endpoint had not been parameterized, giving attackers direct access to data and, via the database's OS-level features, the ability to deploy ransomware payloads.</p>
+    </div>
+
+    <div class="safe-box" style="margin-top:16px;">
+        <h4>Ready to see it live?</h4>
+        <p>Click <strong>Live Demo</strong> above to search the fake user database and watch how injection payloads behave against the vulnerable vs. secure endpoint side by side.</p>
+    </div>
+
+</section>
+
+<!-- ══════════════════════════════════════ DEMO ══════════════════════════════════════ -->
+<section id="demo">
+
+    <div class="search-area">
+        <h3>Search Users</h3>
+        <div class="search-row">
+            <input
+                type="text" id="search-input" class="search-input"
+                placeholder="Type a username (e.g. alice) or try an attack payload…"
+                onkeydown="if(event.key==='Enter') runSearch()"
+            >
+            <button class="btn-search" onclick="runSearch()">▶ Run Both Queries</button>
+        </div>
+        <div class="attack-label">Quick attack payloads:</div>
+        <div class="attack-buttons">
+            <button class="attack-btn" onclick="inject(`' OR '1'='1`)">
+                ' OR '1'='1
+            </button>
+            <button class="attack-btn" onclick="inject(`' UNION SELECT id, username, password, email FROM users--`)">
+                ' UNION SELECT … passwords …
+            </button>
+            <button class="attack-btn" onclick="inject(`admin'--`)">
+                admin'--
+            </button>
+            <button class="attack-btn" onclick="inject(`' OR is_admin=1--`)">
+                ' OR is_admin=1--
+            </button>
+        </div>
+    </div>
+
+    <div class="comparison">
+
+        <!-- ── VULNERABLE ── -->
+        <div class="panel vuln">
+            <div class="panel-header">❌ VULNERABLE — String Interpolation</div>
+            <div class="panel-body">
+                <div id="vuln-status-row" class="status-row">
+                    <span class="status-badge idle" id="vuln-badge">IDLE</span>
+                    <span class="count-label" id="vuln-count"></span>
+                </div>
+                <div class="sql-label">Executed SQL</div>
+                <div class="sql-block">
+                    <div id="vuln-sql" class="sql-text">—</div>
+                </div>
+                <div class="results-label">Results</div>
+                <div id="vuln-results-area">
+                    <div class="empty-state">Run a search to see results</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── SECURE ── -->
+        <div class="panel secure">
+            <div class="panel-header">✅ SECURE — Parameterized Query</div>
+            <div class="panel-body">
+                <div id="sec-status-row" class="status-row">
+                    <span class="status-badge idle" id="sec-badge">IDLE</span>
+                    <span class="count-label" id="sec-count"></span>
+                </div>
+                <div class="sql-label">Query Template</div>
+                <div class="sql-block">
+                    <div id="sec-sql" class="sql-text">—</div>
+                </div>
+                <div id="sec-param-area"></div>
+                <div class="results-label">Results</div>
+                <div id="sec-results-area">
+                    <div class="empty-state">Run a search to see results</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="explanation" id="explanation-card">
+        <h3>What Happened?</h3>
+        <p id="explanation-text" style="color:#484f58;">Run a search above to see an explanation of what each query did and why the results differ.</p>
+    </div>
+
+</section>
+
+<footer>MSSE 642 — Software Assurance &nbsp;|&nbsp; Educational purposes only — fake data only &nbsp;|&nbsp; OWASP A05:2025 Injection</footer>
+
+<script>
+// ── Navigation ─────────────────────────────────────────────────────────────
+function showSection(id) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.currentTarget.classList.add('active');
+}
+
+// ── Attack button helper ────────────────────────────────────────────────────
+function inject(payload) {
+    document.getElementById('search-input').value = payload;
+    runSearch();
+}
+
+// ── Render helpers ──────────────────────────────────────────────────────────
+function renderTable(rows, isVuln) {
+    if (!rows || rows.length === 0) {
+        return '<div class="empty-state">No rows returned</div>';
+    }
+    const cols = Object.keys(rows[0]);
+    let html = '<table class="results-table"><thead><tr>';
+    cols.forEach(c => { html += `<th>${c}</th>`; });
+    html += '</tr></thead><tbody>';
+    rows.forEach(row => {
+        html += '<tr>';
+        cols.forEach(c => {
+            let val = row[c];
+            let cls = '';
+            // Heuristic: if a value looks like a password leaked via UNION, highlight it
+            const isLeaked = isVuln && c === 'email' && val && val.match(/^[A-Za-z0-9!@#$%^&*]+$/) && !val.includes('@');
+            if (isLeaked) cls = ' class="leaked-cell"';
+            if (c === 'is_admin' && val === 1) {
+                html += `<td${cls}><span class="admin-badge">ADMIN</span></td>`;
+            } else {
+                html += `<td${cls}>${val ?? 'NULL'}</td>`;
+            }
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+}
+
+function highlightSQL(sql, q) {
+    if (!q) return `<span class="sql-text">${esc(sql)}</span>`;
+    // find the user-supplied part and highlight it in red
+    const escaped = esc(q);
+    const sqlEsc = esc(sql);
+    const idx = sqlEsc.indexOf(escaped);
+    if (idx === -1) return `<span class="sql-text">${sqlEsc}</span>`;
+    return (
+        `<span class="sql-text">${sqlEsc.slice(0, idx)}</span>` +
+        `<span class="sql-inject">${escaped}</span>` +
+        `<span class="sql-text">${sqlEsc.slice(idx + escaped.length)}</span>`
+    );
+}
+
+function esc(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function setBadge(id, state, countText) {
+    const el = document.getElementById(id);
+    el.className = 'status-badge ' + state;
+    const labels = { idle: 'IDLE', breached: '⚠ BREACHED', safe: '✅ SAFE', error: '⚠ SQL ERROR' };
+    el.textContent = labels[state] || state;
+    document.getElementById(id.replace('badge', 'count')).textContent = countText || '';
+}
+
+// ── Explanation generator ────────────────────────────────────────────────────
+function buildExplanation(q, vulnData, secData) {
+    const box = document.getElementById('explanation-card');
+    const txt = document.getElementById('explanation-text');
+
+    if (!q) {
+        txt.innerHTML = 'Enter a search term above to see an explanation.';
+        txt.style.color = '#484f58';
+        return;
+    }
+
+    const isAttack = q.includes("'") || q.toLowerCase().includes('union') ||
+                     q.includes('--') || q.toLowerCase().includes(' or ');
+
+    if (!isAttack) {
+        const vCount = vulnData.results ? vulnData.results.length : 0;
+        const sCount = secData.results ? secData.results.length : 0;
+        txt.innerHTML = `<strong>Normal search — no injection.</strong> Both queries returned the same ${vCount} row(s). ` +
+            `The vulnerable endpoint happened to work correctly here because the input contains no SQL metacharacters. ` +
+            `Try one of the attack payloads to see how they diverge.`;
+        txt.style.color = '#c9d1d9';
+        return;
+    }
+
+    let html = '';
+
+    if (q.toLowerCase().includes('union')) {
+        html = `<span class="expl-vuln"><strong>UNION SELECT injection detected.</strong></span><br><br>` +
+            `The attacker appended a second <code>SELECT</code> to the original query using <code>UNION</code>. ` +
+            `Because the original query only selects <code>id, username, email, is_admin</code> (no password), ` +
+            `the UNION replaces the <code>email</code> column with the actual <code>password</code> value. ` +
+            `Any rows returned show real password hashes in what looks like the email column — ` +
+            `highlighted in <span class="expl-vuln">red</span> above.<br><br>` +
+            `<span class="expl-safe"><strong>Secure side:</strong></span> The parameterized query treats the entire ` +
+            `payload as a literal string to look up in the username column. No user has a username equal to that ` +
+            `entire payload, so zero rows are returned and the database never sees a UNION.`;
+    } else if (q.includes("'") && q.toLowerCase().includes(' or ')) {
+        const isAdminFilter = q.toLowerCase().includes('is_admin');
+        html = `<span class="expl-vuln"><strong>OR injection detected.</strong></span><br><br>` +
+            `The single quote closes the string literal that the developer intended, and then ` +
+            `<code>OR ${isAdminFilter ? 'is_admin=1' : "'1'='1'"}</code> is appended as valid SQL. ` +
+            `Because <code>${isAdminFilter ? 'is_admin=1' : "'1'='1'"}</code> is always true, ` +
+            `the WHERE clause matches ${isAdminFilter ? 'all admin' : 'every'} row in the table. ` +
+            `The attacker never needed to know a valid username.<br><br>` +
+            `<span class="expl-safe"><strong>Secure side:</strong></span> The entire payload ` +
+            `<code>${esc(q)}</code> is bound as a single parameter. The database engine ` +
+            `looks for a username <em>literally equal</em> to that string — finds none — and returns 0 rows.`;
+    } else if (q.includes("'--") || q.endsWith("--")) {
+        html = `<span class="expl-vuln"><strong>Comment truncation injection detected.</strong></span><br><br>` +
+            `The single quote closes the string early, and <code>--</code> is a SQL comment that discards ` +
+            `everything after it. If the original query had additional conditions (such as ` +
+            `<code>AND password = '…'</code>), they are now silently stripped, letting the attacker ` +
+            `log in as any known username with no password.<br><br>` +
+            `<span class="expl-safe"><strong>Secure side:</strong></span> The parameterized query passes ` +
+            `<code>${esc(q)}</code> as a data value. The <code>--</code> is not interpreted; the engine ` +
+            `looks for a username equal to the full string and returns 0 rows.`;
+    } else {
+        html = `<span class="expl-vuln"><strong>Injection payload detected.</strong></span> The vulnerable ` +
+            `query embedded your input directly into the SQL string. The secure side returned ` +
+            `0 rows because the parameterized query treated the entire input as literal data, not code.`;
+    }
+
+    txt.innerHTML = html;
+    txt.style.color = '#c9d1d9';
+}
+
+// ── Core search ─────────────────────────────────────────────────────────────
+async function runSearch() {
+    const q = document.getElementById('search-input').value;
+
+    setBadge('vuln-badge', 'idle', 'Searching…');
+    setBadge('sec-badge',  'idle', 'Searching…');
+    document.getElementById('vuln-sql').innerHTML = '…';
+    document.getElementById('sec-sql').innerHTML  = '…';
+    document.getElementById('vuln-results-area').innerHTML = '<div class="empty-state">Loading…</div>';
+    document.getElementById('sec-results-area').innerHTML  = '<div class="empty-state">Loading…</div>';
+    document.getElementById('sec-param-area').innerHTML = '';
+
+    const [vulnRes, secRes] = await Promise.all([
+        fetch('/api/search/vulnerable?q=' + encodeURIComponent(q)).then(r => r.json()),
+        fetch('/api/search/secure?q='    + encodeURIComponent(q)).then(r => r.json()),
+    ]);
+
+    // ── Vulnerable panel ──
+    document.getElementById('vuln-sql').innerHTML = highlightSQL(vulnRes.sql, q);
+
+    if (vulnRes.error) {
+        setBadge('vuln-badge', 'error', 'SQL error');
+        document.getElementById('vuln-results-area').innerHTML =
+            `<div style="color:#d29922;font-size:12px;font-family:monospace;padding:8px 0;">Error: ${esc(vulnRes.error)}</div>`;
+    } else {
+        const count = vulnRes.results.length;
+        const isAttack = q.includes("'") || q.toLowerCase().includes('union') ||
+                         q.includes('--') || q.toLowerCase().includes(' or ');
+        setBadge('vuln-badge', (count > 0 && isAttack) ? 'breached' : (count > 0 ? 'idle' : 'idle'),
+                 `${count} row(s) returned`);
+        document.getElementById('vuln-results-area').innerHTML = renderTable(vulnRes.results, true);
+    }
+
+    // ── Secure panel ──
+    document.getElementById('sec-sql').innerHTML =
+        `<span class="sql-text">${esc(secRes.sql)}</span>`;
+    document.getElementById('sec-param-area').innerHTML =
+        `<div class="param-row">
+            <span class="param-label">Bound parameter:</span>
+            <span class="param-value">${esc(JSON.stringify(secRes.parameter))}</span>
+         </div>`;
+
+    const sCount = secRes.results.length;
+    setBadge('sec-badge', 'safe', `${sCount} row(s) returned`);
+    document.getElementById('sec-results-area').innerHTML = renderTable(secRes.results, false);
+
+    buildExplanation(q, vulnRes, secRes);
+}
+</script>
+</body>
+</html>
