@@ -1,5 +1,7 @@
 # Hands-On Project 3: Penetration Testing with Kali Linux, Metasploit, and Metasploitable2
 
+**Group Members:** Abdullah Bahir, Emad Fattah, Shawn Wilkinson
+
 ## Part 1: Starting Metasploit Framework and Metasploitable2
 
 ### Screen Shot 1: Both VMs running and connected
