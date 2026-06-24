@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecMisconfig Inspector — OWASP A02:2025 Security Misconfiguration</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface2: #21262d;
+            --border: #30363d;
+            --text: #c9d1d9;
+            --text-dim: #8b949e;
+            --accent: #58a6ff;
+            --red: #f85149;
+            --red-dim: #3d0c0c;
+            --green: #3fb950;
+            --green-dim: #0d2a0d;
+            --yellow: #e3b341;
+            --purple: #bc8cff;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 20px 24px;
+            text-align: center;
+        }
+        .header h1 { font-size: 1.8rem; color: var(--accent); margin-bottom: 4px; }
+        .header .subtitle { color: var(--text-dim); font-size: 0.9rem; margin-bottom: 10px; }
+        .edu-banner {
+            display: inline-block;
+            background: #2a1a00;
+            border: 1px solid var(--yellow);
+            color: var(--yellow);
+            padding: 4px 14px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .tab-nav {
+            display: flex;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 0.88rem;
+            padding: 12px 16px;
+            white-space: nowrap;
+            transition: color 0.15s, border-color 0.15s;
+        }
+        .tab-btn:hover { color: var(--text); }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .main { padding: 20px 24px; }
+        .scenario-desc {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 16px;
+            font-size: 0.88rem;
+            color: var(--text-dim);
+            line-height: 1.55;
+        }
+        .scenario-desc strong { color: var(--text); }
+        .panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 860px) { .panels { grid-template-columns: 1fr; } }
+        .panel { border-radius: 8px; overflow: hidden; }
+        .panel.vulnerable { border: 2px solid var(--red); }
+        .panel.secure { border: 2px solid var(--green); }
+        .panel-header {
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: 0.83rem;
+        }
+        .panel.vulnerable .panel-header { background: var(--red-dim); color: var(--red); }
+        .panel.secure .panel-header { background: var(--green-dim); color: var(--green); }
+        .panel-body { background: var(--surface); padding: 16px; min-height: 300px; }
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.83rem;
+            padding: 7px 14px;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .btn:hover { background: #2d333b; border-color: var(--accent); }
+        .btn.primary { background: #1c3a5e; border-color: var(--accent); color: var(--accent); }
+        .btn.primary:hover { background: #1f4e80; }
+        .btn.danger { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+        .btn.danger:hover { background: #5a1010; }
+        .btn.success { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+        .btn.success:hover { background: #1a3a1a; }
+        .scan-result {
+            border-radius: 4px;
+            font-size: 0.79rem;
+            margin-bottom: 4px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .scan-result.missing { background: #1a0808; border-left: 3px solid var(--red); }
+        .scan-result.present { background: #081a08; border-left: 3px solid var(--green); }
+        .scan-result.weak { background: #1a1200; border-left: 3px solid var(--yellow); }
+        .scan-result .label { font-family: 'Courier New', monospace; color: var(--accent); min-width: 210px; }
+        .scan-result.missing .status { color: var(--red); font-weight: 600; }
+        .scan-result.present .status { color: var(--green); font-weight: 600; }
+        .scan-result.weak .status { color: var(--yellow); font-weight: 600; }
+        .sub-note {
+            font-size: 0.74rem;
+            color: var(--text-dim);
+            margin: -2px 0 6px 13px;
+            font-style: italic;
+        }
+        .code-block {
+            background: #010409;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.77rem;
+            line-height: 1.65;
+            overflow: auto;
+            padding: 12px;
+            white-space: pre;
+            max-height: 280px;
+        }
+        .file-list { list-style: none; }
+        .file-item {
+            align-items: center;
+            border-radius: 4px;
+            cursor: default;
+            display: flex;
+            font-family: 'Courier New', monospace;
+            font-size: 0.81rem;
+            gap: 8px;
+            padding: 5px 8px;
+            transition: background 0.1s;
+        }
+        .file-item:hover { background: var(--surface2); }
+        .file-item.sensitive { color: var(--red); }
+        .file-item.dir-item { color: var(--accent); }
+        .file-item.normal { color: var(--text); }
+        .file-size { color: var(--text-dim); font-size: 0.72rem; margin-left: auto; }
+        .login-form { max-width: 280px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.79rem; color: var(--text-dim); margin-bottom: 4px; }
+        .form-group input {
+            background: #010409;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            font-size: 0.83rem;
+            padding: 7px 11px;
+            width: 100%;
+        }
+        .form-group input:focus { border-color: var(--accent); outline: none; }
+        .login-msg {
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            padding: 8px 12px;
+            line-height: 1.4;
+        }
+        .login-msg.error { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+        .login-msg.success { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+        .login-msg.warn { background: #2a1a00; color: var(--yellow); border: 1px solid var(--yellow); }
+        .url-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .url-bar input {
+            background: #010409;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text);
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-size: 0.82rem;
+            padding: 6px 10px;
+        }
+        .url-bar input:focus { border-color: var(--accent); outline: none; }
+        .info-panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .info-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+        }
+        .info-tab {
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 0.82rem;
+            padding: 10px 16px;
+            transition: all 0.15s;
+        }
+        .info-tab:hover { color: var(--text); }
+        .info-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .info-content { padding: 18px; line-height: 1.6; font-size: 0.87rem; }
+        .info-content h3 { color: var(--accent); margin-bottom: 10px; }
+        .info-content p { color: var(--text-dim); margin-bottom: 10px; }
+        .info-content ul { color: var(--text-dim); padding-left: 20px; }
+        .info-content li { margin-bottom: 4px; }
+        .info-content code {
+            background: var(--surface2);
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            padding: 1px 5px;
+            color: var(--purple);
+        }
+        .tag {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: inline-block;
+            font-size: 0.73rem;
+            padding: 2px 8px;
+            margin: 2px;
+            color: var(--text-dim);
+        }
+        .breach-card {
+            background: #1a0808;
+            border: 1px solid var(--red);
+            border-radius: 6px;
+            margin-bottom: 12px;
+            padding: 12px;
+        }
+        .breach-card h4 { color: var(--red); margin-bottom: 6px; font-size: 0.88rem; }
+        .breach-card p { margin-bottom: 0; font-size: 0.84rem; }
+        .prevention-card {
+            background: #081a08;
+            border: 1px solid var(--green);
+            border-radius: 6px;
+            margin-bottom: 10px;
+            padding: 10px 14px;
+        }
+        .prevention-card strong { color: var(--green); display: block; margin-bottom: 4px; }
+        .prevention-card p { margin-bottom: 0; font-size: 0.83rem; }
+        .hidden { display: none; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .info-tab-content { display: none; }
+        .info-tab-content.active { display: block; }
+        .alert-box {
+            border-radius: 4px;
+            font-size: 0.78rem;
+            margin-top: 10px;
+            padding: 7px 11px;
+            line-height: 1.45;
+        }
+        .alert-box.red { background: #1a0808; border: 1px solid var(--red); color: var(--red); }
+        .alert-box.green { background: #081a08; border: 1px solid var(--green); color: var(--green); }
+        .placeholder-text { color: var(--text-dim); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>&#128269; SecMisconfig Inspector</h1>
+    <div class="subtitle">OWASP A02:2025 &#8212; Security Misconfiguration Educational Demo</div>
+    <div class="edu-banner">&#9888;&#65039; Educational purposes only &#8212; all simulations run entirely in the browser</div>
+</div>
+
+<div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('headers')">&#128274; Security Headers</button>
+    <button class="tab-btn" onclick="switchTab('debug')">&#128027; Debug Mode</button>
+    <button class="tab-btn" onclick="switchTab('dirlist')">&#128193; Directory Listing</button>
+    <button class="tab-btn" onclick="switchTab('config')">&#9881;&#65039; Config Files</button>
+    <button class="tab-btn" onclick="switchTab('admin')">&#128100; Admin Panel</button>
+</div>
+
+<div class="main">
+
+    <!-- TAB 1: SECURITY HEADERS -->
+    <div id="tab-headers" class="tab-content active">
+        <div class="scenario-desc">
+            <strong>Scenario:</strong> HTTP security headers instruct the browser on security policies &#8212; whether the site
+            can be embedded in frames, whether HTTPS is enforced, what resources may be loaded, and how to handle content types.
+            A server that sends no security headers leaves visitors vulnerable to clickjacking, MIME-sniffing, and protocol
+            downgrade attacks. This is a misconfiguration, not a code bug.
+        </div>
+        <div class="controls">
+            <button class="btn primary" onclick="scanHeaders()">&#128269; Scan Headers</button>
+            <button class="btn" onclick="resetHeaders()">&#8634; Reset</button>
+        </div>
+        <div class="panels">
+            <div class="panel vulnerable">
+                <div class="panel-header">&#9888;&#65039; VULNERABLE &#8212; Missing Security Headers</div>
+                <div class="panel-body" id="headers-vuln">
+                    <div class="placeholder-text">Click "Scan Headers" to inspect the HTTP response headers from both servers.</div>
+                </div>
+            </div>
+            <div class="panel secure">
+                <div class="panel-header">&#9989; SECURE &#8212; Properly Configured Headers</div>
+                <div class="panel-body" id="headers-sec">
+                    <div class="placeholder-text">Click "Scan Headers" to inspect the HTTP response headers from both servers.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: DEBUG MODE -->
+    <div id="tab-debug" class="tab-content">
+        <div class="scenario-desc">
+            <strong>Scenario:</strong> Debug mode is essential during development but catastrophic in production.
+            When an unhandled error occurs on a misconfigured server, it may expose full stack traces revealing
+            internal file paths, database connection strings with credentials, API keys, framework versions, and
+            environment variables. This information hands attackers a roadmap to the system.
+        </div>
+        <div class="controls">
+            <button class="btn danger" onclick="triggerError()">&#128165; Trigger Server Error</button>
+            <button class="btn" onclick="resetDebug()">&#8634; Reset</button>
+        </div>
+        <div class="panels">
+            <div class="panel vulnerable">
+                <div class="panel-header">&#9888;&#65039; VULNERABLE &#8212; Debug Mode ON in Production</div>
+                <div class="panel-body" id="debug-vuln">
+                    <div class="placeholder-text">Click "Trigger Server Error" to see what an attacker receives when an error occurs.</div>
+                </div>
+            </div>
+            <div class="panel secure">
+                <div class="panel-header">&#9989; SECURE &#8212; Generic Error Page Only</div>
+                <div class="panel-body" id="debug-sec">
+                    <div class="placeholder-text">Click "Trigger Server Error" to see the proper error response.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: DIRECTORY LISTING -->
+    <div id="tab-dirlist" class="tab-content">
+        <div class="scenario-desc">
+            <strong>Scenario:</strong> When a web server has directory listing enabled, browsing to a folder URL shows
+            every file in that directory. Attackers use this to discover backup files, database dumps, configuration
+            files, and sensitive data that was never intended to be public. The misconfiguration is a single missing
+            server directive: <code>Options -Indexes</code> (Apache) or <code>autoindex off</code> (nginx).
+        </div>
+        <div class="controls">
+            <button class="btn primary" onclick="loadDir('/')">&#128193; Browse /</button>
+            <button class="btn" onclick="loadDir('/uploads')">&#128193; /uploads</button>
+            <button class="btn" onclick="loadDir('/admin')">&#128193; /admin</button>
+            <button class="btn" onclick="resetDir()">&#8634; Reset</button>
+        </div>
+        <div class="panels">
+            <div class="panel vulnerable">
+                <div class="panel-header">&#9888;&#65039; VULNERABLE &#8212; Directory Listing Enabled</div>
+                <div class="panel-body" id="dirlist-vuln">
+                    <div class="placeholder-text">Click a directory button above to browse the server's file structure.</div>
+                </div>
+            </div>
+            <div class="panel secure">
+                <div class="panel-header">&#9989; SECURE &#8212; Directory Listing Disabled</div>
+                <div class="panel-body" id="dirlist-sec">
+                    <div class="placeholder-text">Click a directory button above to see the secure server's response.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: CONFIG FILES -->
+    <div id="tab-config" class="tab-content">
+        <div class="scenario-desc">
+            <strong>Scenario:</strong> Configuration files, environment files, and database backups are frequently
+            left in web-accessible directories. Attackers routinely probe for these predictable filenames using
+            automated tools. A misconfigured server serves them as plain text; a properly configured server
+            blocks them at the web server level or stores them entirely outside the web root.
+        </div>
+        <div class="url-bar">
+            <input type="text" id="config-url" value="/.env" placeholder="Enter path to probe..." />
+            <button class="btn primary" onclick="probeFile()">GET</button>
+        </div>
+        <div class="controls" style="margin-top: 0;">
+            <span style="font-size: 0.79rem; color: var(--text-dim);">Quick targets:</span>
+            <button class="btn" onclick="setAndProbe('/.env')">/.env</button>
+            <button class="btn" onclick="setAndProbe('/config.php')">/config.php</button>
+            <button class="btn" onclick="setAndProbe('/.git/config')">.git/config</button>
+            <button class="btn" onclick="setAndProbe('/phpinfo.php')">/phpinfo.php</button>
+            <button class="btn" onclick="setAndProbe('/backup.sql')">/backup.sql</button>
+        </div>
+        <div class="panels">
+            <div class="panel vulnerable">
+                <div class="panel-header">&#9888;&#65039; VULNERABLE &#8212; Files Publicly Accessible</div>
+                <div class="panel-body" id="config-vuln">
+                    <div class="placeholder-text">Enter a file path above and click GET to probe the server.</div>
+                </div>
+            </div>
+            <div class="panel secure">
+                <div class="panel-header">&#9989; SECURE &#8212; Files Blocked / Not Accessible</div>
+                <div class="panel-body" id="config-sec">
+                    <div class="placeholder-text">Enter a file path above and click GET to probe the server.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: ADMIN PANEL -->
+    <div id="tab-admin" class="tab-content">
+        <div class="scenario-desc">
+            <strong>Scenario:</strong> Admin panels at predictable URLs (<code>/admin</code>, <code>/wp-admin</code>,
+            <code>/administrator</code>) with factory-default credentials (<code>admin/admin</code>,
+            <code>admin/password</code>) are among the most common security misconfigurations. Automated scanners
+            find them within minutes of a server going online. Try <code>admin / admin</code> on both panels.
+        </div>
+        <div class="panels">
+            <div class="panel vulnerable">
+                <div class="panel-header">&#9888;&#65039; VULNERABLE &#8212; Default Credentials, No Lockout</div>
+                <div class="panel-body" id="admin-vuln-body">
+                    <div class="login-form">
+                        <div style="font-size: 0.79rem; color: var(--text-dim); margin-bottom: 12px;">&#128275; /admin &#8212; No authentication hardening</div>
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="vuln-user" value="admin" />
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="vuln-pass" value="admin" />
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn danger" onclick="vulnLogin()">Login</button>
+                            <button class="btn" onclick="resetAdmin()">Reset</button>
+                        </div>
+                        <div id="vuln-msg"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel secure">
+                <div class="panel-header">&#9989; SECURE &#8212; Hardened Admin Access</div>
+                <div class="panel-body" id="admin-sec-body">
+                    <div class="login-form">
+                        <div style="font-size: 0.79rem; color: var(--text-dim); margin-bottom: 12px;">&#128274; /admin &#8212; Rate limited, MFA enforced</div>
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="sec-user" value="admin" />
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="sec-pass" value="admin" />
+                        </div>
+                        <div id="sec-captcha" class="hidden" style="margin-bottom: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 0.8rem;">
+                            <div style="color: var(--text-dim);">CAPTCHA: What is 7 + 3?</div>
+                            <input type="text" id="captcha-input" placeholder="Answer..." style="margin-top: 6px; background: #010409; border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.82rem; padding: 5px 8px; width: 100%;" />
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn success" onclick="secLogin()">Login</button>
+                            <button class="btn" onclick="resetAdmin()">Reset</button>
+                        </div>
+                        <div id="sec-msg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFO PANEL -->
+    <div class="info-panel">
+        <div class="info-tabs">
+            <button class="info-tab active" onclick="switchInfoTab('what')">What Is It?</button>
+            <button class="info-tab" onclick="switchInfoTab('how')">How It Works</button>
+            <button class="info-tab" onclick="switchInfoTab('breach')">Real-World Breaches</button>
+            <button class="info-tab" onclick="switchInfoTab('prevent')">Prevention</button>
+        </div>
+        <div class="info-content">
+            <div id="info-what" class="info-tab-content active">
+                <h3>What is Security Misconfiguration?</h3>
+                <p>Security Misconfiguration (OWASP A02:2025) occurs when security settings are <strong style="color: var(--text);">defined, implemented, or maintained incorrectly</strong>.
+                It is one of the most prevalent vulnerabilities precisely because it rarely involves writing new buggy code &#8212;
+                it involves misconfiguring or forgetting to configure secure defaults in existing software.</p>
+                <p>Common forms include:</p>
+                <ul>
+                    <li>Missing or misconfigured HTTP security headers</li>
+                    <li>Debug mode or verbose error handling left on in production</li>
+                    <li>Directory listing enabled on web servers</li>
+                    <li>Sensitive files (.env, config.php, database backups) in publicly accessible directories</li>
+                    <li>Default credentials not changed on admin interfaces</li>
+                    <li>Unnecessary features enabled (phpinfo(), open S3 buckets, unused services)</li>
+                    <li>Software not patched or running known-vulnerable versions</li>
+                    <li>Cloud storage or databases with public read/write access</li>
+                </ul>
+                <p style="margin-top: 10px;">
+                    <span class="tag">OWASP A02:2025</span>
+                    <span class="tag">CWE-16: Configuration</span>
+                    <span class="tag">CWE-200: Information Exposure</span>
+                    <span class="tag">CWE-548: Directory Listing</span>
+                    <span class="tag">CWE-1188: Insecure Default Init</span>
+                </p>
+            </div>
+            <div id="info-how" class="info-tab-content">
+                <h3>How Attackers Exploit Security Misconfiguration</h3>
+                <p>Attackers use <strong style="color: var(--text);">automated scanners</strong> that probe hundreds of predictable paths and configurations in seconds &#8212;
+                no manual effort required:</p>
+                <ul>
+                    <li><strong style="color: var(--text);">Header scanners</strong> (OWASP ZAP, securityheaders.com) enumerate missing or weak HTTP headers</li>
+                    <li><strong style="color: var(--text);">Directory busters</strong> (gobuster, ffuf, dirbuster) brute-force file and directory paths from wordlists of 10,000+ common names including <code>.env</code>, <code>backup.sql</code>, <code>config.php</code></li>
+                    <li><strong style="color: var(--text);">Credential sprayers</strong> try vendor defaults (admin/admin, root/root, admin/password) against every discovered admin panel</li>
+                    <li><strong style="color: var(--text);">Cloud scanners</strong> (ScoutSuite, Prowler) enumerate AWS/GCP/Azure resources with overly permissive ACLs</li>
+                    <li><strong style="color: var(--text);">Shodan / Censys</strong> index internet-facing services and their banners &#8212; revealing servers running outdated software at scale</li>
+                </ul>
+                <p>The attack chain is typically: <strong style="color: var(--text);">discover &#8594; probe &#8594; extract &#8594; escalate</strong>.
+                A directory listing leads to a <code>.env</code> file, which contains a database password, which enables direct
+                database access, which exposes all customer data. Each misconfiguration is a stepping stone to the next.</p>
+            </div>
+            <div id="info-breach" class="info-tab-content">
+                <h3>Real-World Breaches via Security Misconfiguration</h3>
+                <div class="breach-card">
+                    <h4>&#128664; Toyota Connected &#8212; 2013&#8211;2023 (discovered May 2023)</h4>
+                    <p>A cloud storage misconfiguration exposed GPS location data, vehicle identification numbers, and
+                    tracking history of <strong>2.15 million Toyota customers for 10 years</strong>. An AWS S3 bucket
+                    configured as public instead of private meant anyone who discovered the URL could read the data freely.
+                    Toyota discovered the issue during an internal audit in May 2023 &#8212; a decade after the misconfiguration
+                    was introduced. No hacking was required; the data was simply publicly accessible.</p>
+                </div>
+                <div class="breach-card">
+                    <h4>&#9925; Microsoft Power Apps Portals &#8212; 2021</h4>
+                    <p>A <strong>default-open</strong> configuration in Microsoft Power Apps portals caused developers to
+                    unknowingly publish <strong>38 million records</strong> from 47 organizations including American Airlines,
+                    Ford Motor Company, Indiana Department of Health, and New York City MTA. Exposed data included COVID-19
+                    vaccination status, Social Security numbers, and employee contact details.
+                    The root cause: the default setting was "public" instead of "private," and most developers never changed it.</p>
+                </div>
+                <div class="breach-card">
+                    <h4>&#127916; Twitch Source Code Leak &#8212; October 2021</h4>
+                    <p>An anonymous attacker published <strong>125 GB of Twitch's internal data</strong> including the complete
+                    platform source code, internal security tooling, and streamer payout records going back to 2019.
+                    The breach exploited a server misconfiguration that exposed internal Git repositories to unauthorized
+                    access. The leak included cryptographic keys and credential files stored inside the repository &#8212;
+                    another layer of misconfiguration compounding the first.</p>
+                </div>
+            </div>
+            <div id="info-prevent" class="info-tab-content">
+                <h3>Prevention and Secure Configuration Checklist</h3>
+                <div class="prevention-card">
+                    <strong>Set All HTTP Security Headers</strong>
+                    <p>Set <code>Strict-Transport-Security</code>, <code>Content-Security-Policy</code>,
+                    <code>X-Frame-Options: DENY</code>, <code>X-Content-Type-Options: nosniff</code>,
+                    <code>Referrer-Policy</code>, and <code>Permissions-Policy</code> on every HTTP response.
+                    Remove <code>Server</code> and <code>X-Powered-By</code> headers to suppress version disclosure.</p>
+                </div>
+                <div class="prevention-card">
+                    <strong>Disable Debug Mode in Production</strong>
+                    <p>Use environment-specific configuration: <code>DEBUG=False</code> (Django),
+                    <code>APP_ENV=production</code> (Laravel), <code>NODE_ENV=production</code> (Node.js).
+                    Error pages should log full details server-side but show only a generic message and
+                    a reference ID to the client. Never expose stack traces, file paths, or credentials.</p>
+                </div>
+                <div class="prevention-card">
+                    <strong>Block Directory Listing and Sensitive File Access</strong>
+                    <p>Apache: <code>Options -Indexes</code>. Nginx: <code>autoindex off;</code>.
+                    Block access to <code>.env</code>, <code>.git</code>, <code>*.sql</code>, <code>*.bak</code>
+                    at the server level. Store configuration files outside the web root entirely so no URL
+                    can reach them regardless of server configuration.</p>
+                </div>
+                <div class="prevention-card">
+                    <strong>Change Default Credentials Immediately</strong>
+                    <p>Default credentials are the first thing automated scanners try. Generate strong, unique
+                    credentials before going live. Enable MFA on all admin interfaces. Restrict admin panel URLs
+                    to specific IP ranges where possible. Consider changing the admin URL itself from the default.</p>
+                </div>
+                <div class="prevention-card">
+                    <strong>Secure by Default + Automated Scanning in CI/CD</strong>
+                    <p>Use Infrastructure as Code (Terraform, Ansible) so configurations are version-controlled
+                    and auditable. Run automated misconfiguration scanners (OWASP ZAP, Trivy, ScoutSuite, tfsec)
+                    in every CI/CD pipeline. Every new deployment should pass a security configuration baseline check
+                    before going live.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div style="text-align: center; padding: 16px 24px; color: #444; font-size: 0.73rem; border-top: 1px solid var(--border); margin-top: 8px;">
+    SecMisconfig Inspector &#8212; OWASP A02:2025 Security Misconfiguration &#8212; MSSE 642 Vibe Coding Assignment #3 &#8212; Educational purposes only
+</div>
+
+<script>
+// ============================================================
+// TAB MANAGEMENT
+// ============================================================
+const MAIN_TABS = ['headers', 'debug', 'dirlist', 'config', 'admin'];
+const INFO_TABS = ['what', 'how', 'breach', 'prevent'];
+
+function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', MAIN_TABS[i] === name));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+}
+
+function switchInfoTab(name) {
+    document.querySelectorAll('.info-tab').forEach((b, i) => b.classList.toggle('active', INFO_TABS[i] === name));
+    document.querySelectorAll('.info-tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('info-' + name).classList.add('active');
+}
+
+// ============================================================
+// TAB 1: SECURITY HEADERS
+// ============================================================
+function scanHeaders() {
+    document.getElementById('headers-vuln').innerHTML = `
+<div style="font-size:0.77rem;color:var(--text-dim);margin-bottom:10px;font-family:'Courier New',monospace;">
+HTTP/1.1 200 OK &mdash; Response from <span style="color:var(--red)">vulnerable.example.com</span>
+</div>
+<div class="scan-result missing"><span class="label">Strict-Transport-Security</span><span class="status">MISSING</span></div>
+<div class="sub-note">&#9888; No HSTS &mdash; browser can be forced to downgrade to HTTP (MITM attack)</div>
+<div class="scan-result missing"><span class="label">Content-Security-Policy</span><span class="status">MISSING</span></div>
+<div class="sub-note">&#9888; No CSP &mdash; inline scripts and external resources not restricted (XSS amplified)</div>
+<div class="scan-result missing"><span class="label">X-Frame-Options</span><span class="status">MISSING</span></div>
+<div class="sub-note">&#9888; No clickjacking protection &mdash; page can be embedded in an attacker's iframe</div>
+<div class="scan-result missing"><span class="label">X-Content-Type-Options</span><span class="status">MISSING</span></div>
+<div class="sub-note">&#9888; MIME sniffing enabled &mdash; browser may execute mistyped scripts</div>
+<div class="scan-result missing"><span class="label">Referrer-Policy</span><span class="status">MISSING</span></div>
+<div class="sub-note">&#9888; Full URL (including tokens) sent in Referer headers to third-party sites</div>
+<div class="scan-result weak"><span class="label">Server</span><span class="status">EXPOSED: Apache/2.4.1</span></div>
+<div class="sub-note">&#9888; Server version disclosed &mdash; enables targeted CVE lookups</div>
+<div class="scan-result weak"><span class="label">X-Powered-By</span><span class="status">EXPOSED: PHP/7.2.0</span></div>
+<div class="sub-note">&#9888; Framework version disclosed &mdash; PHP 7.2.0 reached end-of-life Nov 2020</div>
+<div class="alert-box red" style="margin-top:10px;">SCORE: 0/5 security headers present &mdash; FAIL</div>`;
+
+    document.getElementById('headers-sec').innerHTML = `
+<div style="font-size:0.77rem;color:var(--text-dim);margin-bottom:10px;font-family:'Courier New',monospace;">
+HTTP/1.1 200 OK &mdash; Response from <span style="color:var(--green)">secure.example.com</span>
+</div>
+<div class="scan-result present"><span class="label">Strict-Transport-Security</span><span class="status">PRESENT</span></div>
+<div class="sub-note" style="color:var(--green)">max-age=31536000; includeSubDomains; preload</div>
+<div class="scan-result present"><span class="label">Content-Security-Policy</span><span class="status">PRESENT</span></div>
+<div class="sub-note" style="color:var(--green)">default-src 'self'; script-src 'self'; img-src 'self' data:</div>
+<div class="scan-result present"><span class="label">X-Frame-Options</span><span class="status">PRESENT</span></div>
+<div class="sub-note" style="color:var(--green)">DENY</div>
+<div class="scan-result present"><span class="label">X-Content-Type-Options</span><span class="status">PRESENT</span></div>
+<div class="sub-note" style="color:var(--green)">nosniff</div>
+<div class="scan-result present"><span class="label">Referrer-Policy</span><span class="status">PRESENT</span></div>
+<div class="sub-note" style="color:var(--green)">strict-origin-when-cross-origin</div>
+<div class="scan-result present"><span class="label">Server</span><span class="status">SUPPRESSED</span></div>
+<div class="sub-note" style="color:var(--green)">&#10003; Header removed &mdash; no version info disclosed</div>
+<div class="scan-result present"><span class="label">X-Powered-By</span><span class="status">SUPPRESSED</span></div>
+<div class="sub-note" style="color:var(--green)">&#10003; Header removed &mdash; no framework info disclosed</div>
+<div class="alert-box green" style="margin-top:10px;">SCORE: 5/5 security headers present &mdash; PASS</div>`;
+}
+
+function resetHeaders() {
+    document.getElementById('headers-vuln').innerHTML = '<div class="placeholder-text">Click "Scan Headers" to inspect the HTTP response headers from both servers.</div>';
+    document.getElementById('headers-sec').innerHTML = '<div class="placeholder-text">Click "Scan Headers" to inspect the HTTP response headers from both servers.</div>';
+}
+
+// ============================================================
+// TAB 2: DEBUG MODE
+// ============================================================
+function triggerError() {
+    document.getElementById('debug-vuln').innerHTML = `
+<div style="background:#010409;border:1px solid var(--red);border-radius:6px;padding:14px;font-family:'Courier New',monospace;font-size:0.76rem;line-height:1.7;overflow:auto;">
+<div style="color:var(--red);font-size:0.95rem;font-weight:700;margin-bottom:8px;">&#9888; PDOException: SQLSTATE[HY000] [2002] Connection refused</div>
+<div style="color:var(--yellow);">File: <span style="color:var(--purple);">/var/www/html/app/Models/UserModel.php</span> on line <span style="color:var(--yellow);">127</span></div>
+<div style="color:var(--text-dim);margin:8px 0 4px;border-top:1px solid var(--border);padding-top:8px;">Stack trace:</div>
+<div style="color:var(--text-dim);">#0 UserModel.php(127): PDO-&gt;__construct(</div>
+<div style="color:var(--red);margin-left:16px;">'mysql:host=<strong>db-prod-01.internal</strong>;port=3306;dbname=<strong>prod_customers</strong>',</div>
+<div style="color:var(--red);margin-left:16px;">'<strong>db_admin</strong>',</div>
+<div style="color:var(--red);margin-left:16px;margin-bottom:6px;">'<strong>Pr0d_DB_P@ss!2024</strong>'</div>
+<div style="color:var(--text-dim);">)</div>
+<div style="color:var(--text-dim);">#1 /var/www/html/app/Http/Controllers/UserController.php(44)</div>
+<div style="color:var(--text-dim);">#2 /var/www/html/vendor/laravel/framework/src/Routing/Router.php(762)</div>
+<div style="color:var(--text-dim);">#3 {main}</div>
+<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:10px;">
+<div style="color:var(--yellow);margin-bottom:4px;">Environment &amp; config:</div>
+<div style="color:var(--text-dim);">PHP <span style="color:var(--red);">7.2.0</span> | Laravel <span style="color:var(--red);">5.8.35</span> | Ubuntu 18.04</div>
+<div style="color:var(--text-dim);">APP_ENV=<span style="color:var(--red);">production</span>&nbsp;&nbsp;APP_DEBUG=<span style="color:var(--red);">true</span></div>
+<div style="color:var(--text-dim);">AWS_ACCESS_KEY_ID=<span style="color:var(--red);">AKIAIOSFODNN7EXAMPLE</span></div>
+<div style="color:var(--text-dim);">AWS_SECRET_ACCESS_KEY=<span style="color:var(--red);">wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY</span></div>
+</div></div>
+<div class="alert-box red">&#9888; Attacker now has: DB host, DB name, DB credentials, cloud keys, framework versions, and all internal file paths.</div>`;
+
+    document.getElementById('debug-sec').innerHTML = `
+<div style="background:#0a0a12;border:1px solid var(--border);border-radius:6px;padding:32px 20px;text-align:center;font-family:'Courier New',monospace;">
+<div style="font-size:3rem;color:var(--text-dim);margin-bottom:10px;">500</div>
+<div style="font-size:1rem;color:var(--text-dim);margin-bottom:8px;">Internal Server Error</div>
+<div style="border-top:1px solid var(--border);margin:14px auto;max-width:280px;padding-top:14px;font-size:0.82rem;color:var(--text-dim);">
+Something went wrong. Our team has been notified automatically.
+</div>
+<div style="font-size:0.77rem;color:#555;">Reference ID: <span style="color:#666;">ERR-2024-0115-48291F</span></div>
+<div style="font-size:0.72rem;color:#444;margin-top:4px;">If this persists, contact support@example.com</div>
+</div>
+<div class="alert-box green">&#10003; Full error logged server-side with stack trace and context. Reference ID lets engineers look it up. Zero sensitive information exposed to the client.</div>`;
+}
+
+function resetDebug() {
+    document.getElementById('debug-vuln').innerHTML = '<div class="placeholder-text">Click "Trigger Server Error" to see what an attacker receives when an error occurs.</div>';
+    document.getElementById('debug-sec').innerHTML = '<div class="placeholder-text">Click "Trigger Server Error" to see the proper error response.</div>';
+}
+
+// ============================================================
+// TAB 3: DIRECTORY LISTING
+// ============================================================
+const DIR_DATA = {
+    '/': [
+        { name: 'admin', type: 'dir' },
+        { name: 'uploads', type: 'dir' },
+        { name: 'backup', type: 'dir' },
+        { name: 'index.php', type: 'file', size: '4.2 KB' },
+        { name: '.env', type: 'file', size: '1.1 KB', sensitive: true },
+        { name: 'config.php', type: 'file', size: '2.8 KB', sensitive: true },
+        { name: '.htaccess', type: 'file', size: '512 B' },
+        { name: 'phpinfo.php', type: 'file', size: '48 B', sensitive: true },
+    ],
+    '/uploads': [
+        { name: '..', type: 'dir' },
+        { name: 'user_photos', type: 'dir' },
+        { name: 'exports', type: 'dir' },
+        { name: 'customer_list_2024-01-15.csv', type: 'file', size: '15.4 MB', sensitive: true },
+        { name: 'employee_data_export.xlsx', type: 'file', size: '3.2 MB', sensitive: true },
+    ],
+    '/admin': [
+        { name: '..', type: 'dir' },
+        { name: 'index.php', type: 'file', size: '1.8 KB' },
+        { name: 'users.php', type: 'file', size: '5.4 KB' },
+        { name: 'credentials_backup.txt', type: 'file', size: '892 B', sensitive: true },
+        { name: 'db_backup_2024-01-01.sql', type: 'file', size: '127 MB', sensitive: true },
+    ]
+};
+
+function loadDir(path) {
+    const files = DIR_DATA[path] || [];
+    let html = `<div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:10px;font-family:'Courier New',monospace;">Index of ${path}</div>`;
+    html += `<ul class="file-list">`;
+    files.forEach(f => {
+        const isDir = f.type === 'dir';
+        const icon = isDir ? '&#128193;' : (f.sensitive ? '&#128308;' : '&#128196;');
+        const cls = isDir ? 'dir-item' : (f.sensitive ? 'sensitive' : 'normal');
+        const sizeHtml = f.size ? `<span class="file-size">${f.size}</span>` : '';
+        html += `<li class="file-item ${cls}">${icon} <span>${f.name}${isDir ? '/' : ''}</span>${sizeHtml}</li>`;
+    });
+    html += `</ul>`;
+    const sensitiveCount = files.filter(f => f.sensitive).length;
+    if (sensitiveCount > 0) {
+        html += `<div class="alert-box red" style="margin-top:10px;">&#9888; ${sensitiveCount} sensitive file(s) exposed. An attacker can download these directly.</div>`;
+    }
+    document.getElementById('dirlist-vuln').innerHTML = html;
+
+    document.getElementById('dirlist-sec').innerHTML = `
+<div style="text-align:center;padding:50px 20px;font-family:'Courier New',monospace;">
+<div style="font-size:2rem;color:var(--red);margin-bottom:8px;">403</div>
+<div style="color:var(--text-dim);margin-bottom:6px;">Forbidden</div>
+<div style="font-size:0.79rem;color:#555;">You don't have permission to access ${path} on this server.</div>
+</div>
+<div class="alert-box green">&#10003; Directory listing disabled. Apache: <code style="color:var(--green);">Options -Indexes</code> | Nginx: <code style="color:var(--green);">autoindex off;</code></div>`;
+}
+
+function resetDir() {
+    document.getElementById('dirlist-vuln').innerHTML = '<div class="placeholder-text">Click a directory button above to browse the server\'s file structure.</div>';
+    document.getElementById('dirlist-sec').innerHTML = '<div class="placeholder-text">Click a directory button above to see the secure server\'s response.</div>';
+}
+
+// ============================================================
+// TAB 4: CONFIG FILES
+// ============================================================
+const CONFIG_FILES = {
+    '/.env': `APP_NAME=MyProductionApp
+APP_ENV=production
+APP_KEY=base64:4N2R8V+L7mxA9pQzWYfKcDJiEhTb6sUo3Gn1vP0=
+APP_DEBUG=true
+
+DB_CONNECTION=mysql
+DB_HOST=db-prod-01.internal
+DB_PORT=3306
+DB_DATABASE=prod_customers
+DB_USERNAME=db_admin
+DB_PASSWORD=Pr0d_DB_P@ss!2024
+
+STRIPE_SECRET=sk_live_51ABCDEexample123...
+AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
+AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=company-prod-backups
+
+MAIL_PASSWORD=smtp_prod_password_2024`,
+    '/config.php': `<?php
+// Database Configuration (stored in web root - BAD PRACTICE)
+define('DB_HOST',    'db-prod-01.internal');
+define('DB_USER',    'db_admin');
+define('DB_PASS',    'Pr0d_DB_P@ss!2024');
+define('DB_NAME',    'prod_customers');
+
+// Admin Settings
+define('ADMIN_USER', 'admin');
+define('ADMIN_HASH', 'e10adc3949ba59abbe56e057f20f883e'); // MD5 of: 123456
+
+// API Keys
+define('PAYMENT_KEY', 'pk_live_51ABCexample...');
+define('MAPS_KEY',    'AIzaSyDexample-key-here');
+define('SESSION_SECRET', 'mysecretkey2024');
+?>`,
+    '/.git/config': `[core]
+    repositoryformatversion = 0
+    filemode = true
+    bare = false
+
+[remote "origin"]
+    url = https://github-token:ghp_ExampleTokenABC123xyz@github.com/company/prod-app.git
+    fetch = +refs/heads/*:refs/remotes/origin/*
+
+[branch "main"]
+    remote = origin
+    merge = refs/heads/main`,
+    '/phpinfo.php': `PHP Version 7.2.0
+
+System: Linux web-prod-01 4.15.0-20-generic
+Server API: Apache 2.0 Handler
+Loaded config: /etc/php/7.2/apache2/php.ini
+
+-- Security Settings --
+allow_url_fopen:   On         (recommended: Off)
+expose_php:        On         (recommended: Off)
+display_errors:    On         (recommended: Off)
+open_basedir:      (none)     (recommended: restrict to web root)
+
+-- Database --
+PDO drivers: mysql, sqlite
+mysql.default_host: db-prod-01.internal
+
+-- Environment Variables --
+[full server environment exposed including PATH, HOME, secrets...]`,
+    '/backup.sql': `-- MySQL dump 10.13 | Server version 8.0.25
+-- Database: prod_customers | Date: 2024-01-15 03:00:02
+
+CREATE TABLE users (
+  id int NOT NULL AUTO_INCREMENT,
+  email varchar(255),
+  password_hash varchar(255),
+  ssn_last4 varchar(4),
+  credit_card_token varchar(255),
+  PRIMARY KEY (id)
+);
+
+INSERT INTO users VALUES
+(1,'john.doe@example.com','$2y$10$abc...','6789','tok_visa_xxx'),
+(2,'jane.smith@example.com','$2y$10$def...','4321','tok_mc_xxx'),
+-- ... 847,293 more customer rows ...`
+};
+
+function escapeHtml(t) {
+    return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setAndProbe(path) {
+    document.getElementById('config-url').value = path;
+    probeFile();
+}
+
+function probeFile() {
+    const path = document.getElementById('config-url').value.trim() || '/.env';
+    const content = CONFIG_FILES[path];
+
+    if (content) {
+        document.getElementById('config-vuln').innerHTML = `
+<div style="font-size:0.77rem;color:var(--text-dim);margin-bottom:8px;font-family:'Courier New',monospace;">HTTP/1.1 200 OK &nbsp;|&nbsp; Content-Type: text/plain &nbsp;|&nbsp; GET ${escapeHtml(path)}</div>
+<div class="code-block">${escapeHtml(content)}</div>
+<div class="alert-box red">&#9888; File served to any visitor without authentication. Contains credentials and API keys.</div>`;
+    } else {
+        document.getElementById('config-vuln').innerHTML = `
+<div style="font-size:0.77rem;color:var(--text-dim);margin-bottom:8px;font-family:'Courier New',monospace;">HTTP/1.1 404 Not Found &nbsp;|&nbsp; GET ${escapeHtml(path)}</div>
+<div style="color:var(--text-dim);font-size:0.84rem;text-align:center;padding:30px;">File not found on this server. Try one of the quick target buttons above.</div>`;
+    }
+
+    document.getElementById('config-sec').innerHTML = `
+<div style="font-size:0.77rem;color:var(--text-dim);margin-bottom:8px;font-family:'Courier New',monospace;">HTTP/1.1 404 Not Found &nbsp;|&nbsp; GET ${escapeHtml(path)}</div>
+<div style="text-align:center;padding:40px 20px;font-family:'Courier New',monospace;">
+<div style="font-size:2rem;color:var(--text-dim);margin-bottom:8px;">404</div>
+<div style="color:var(--text-dim);">Not Found</div>
+<div style="font-size:0.78rem;color:#555;margin-top:8px;">The requested URL was not found on this server.</div>
+</div>
+<div class="alert-box green">&#10003; Sensitive files are blocked at the server level and stored outside the web root. The server returns 404 for any attempt to access .env, .git, *.sql, *.bak, phpinfo.php.</div>`;
+}
+
+// ============================================================
+// TAB 5: ADMIN PANEL
+// ============================================================
+let vulnAttempts = 0, secAttempts = 0, secLocked = false;
+
+function vulnLogin() {
+    const u = document.getElementById('vuln-user').value;
+    const p = document.getElementById('vuln-pass').value;
+    const msg = document.getElementById('vuln-msg');
+    vulnAttempts++;
+
+    if (u === 'admin' && p === 'admin') {
+        msg.innerHTML = `<div class="login-msg success">&#9989; Login successful! Welcome, Administrator.<br><small>Attempt #${vulnAttempts} &mdash; no rate limiting triggered.</small></div>`;
+        setTimeout(() => {
+            document.getElementById('admin-vuln-body').innerHTML = `
+<div style="padding:16px;">
+<div style="color:var(--red);font-weight:700;margin-bottom:10px;">&#9888; ADMIN PANEL ACCESS GRANTED</div>
+<div style="font-size:0.81rem;color:var(--text-dim);margin-bottom:10px;">Credentials used: <code style="color:var(--red);">admin / admin</code> (factory defaults, never changed)</div>
+<div style="font-size:0.81rem;color:var(--text-dim);margin-bottom:4px;">Attacker now controls:</div>
+<ul style="font-size:0.79rem;color:var(--text-dim);padding-left:18px;margin-bottom:14px;">
+<li>847,293 customer records</li>
+<li>Payment processing settings</li>
+<li>User account management</li>
+<li>System configuration &amp; API keys</li>
+<li>Audit log access (can erase tracks)</li>
+</ul>
+<button class="btn" onclick="resetAdmin()" style="font-size:0.79rem;">&#8634; Reset Demo</button>
+</div>`;
+        }, 500);
+    } else {
+        msg.innerHTML = `<div class="login-msg error">&#10060; Invalid credentials. Try <code>admin</code> / <code>admin</code>.</div>`;
+    }
+}
+
+function secLogin() {
+    const u = document.getElementById('sec-user').value;
+    const p = document.getElementById('sec-pass').value;
+    const msg = document.getElementById('sec-msg');
+    const captchaDiv = document.getElementById('sec-captcha');
+
+    if (secLocked) {
+        msg.innerHTML = `<div class="login-msg warn">&#9203; Account locked. Wait for the lockout period to expire.</div>`;
+        return;
+    }
+
+    secAttempts++;
+    if (secAttempts >= 3) captchaDiv.classList.remove('hidden');
+
+    if (secAttempts >= 5) {
+        secLocked = true;
+        let t = 30;
+        msg.innerHTML = `<div class="login-msg warn">&#128274; Too many failed attempts. Locked for <span id="ctimer">30</span>s. Further attempts logged.</div>`;
+        const interval = setInterval(() => {
+            t--;
+            const el = document.getElementById('ctimer');
+            if (el) el.textContent = t;
+            if (t <= 0) {
+                clearInterval(interval);
+                secLocked = false;
+                secAttempts = 0;
+                captchaDiv.classList.add('hidden');
+                document.getElementById('captcha-input').value = '';
+                msg.innerHTML = `<div class="login-msg warn" style="border-color:var(--accent);color:var(--accent);">Lockout expired. You may try again.</div>`;
+            }
+        }, 1000);
+        return;
+    }
+
+    if (secAttempts >= 3) {
+        const ans = document.getElementById('captcha-input').value.trim();
+        if (ans !== '10') {
+            msg.innerHTML = `<div class="login-msg error">&#10060; Authentication failed. Complete the CAPTCHA correctly. Attempt ${secAttempts}/5.</div>`;
+            return;
+        }
+    }
+
+    if (u === 'admin' && p === 'admin') {
+        msg.innerHTML = `<div class="login-msg error">&#10060; Authentication failed &mdash; password does not meet complexity requirements (min 12 chars, mixed case, number, symbol). Attempt ${secAttempts}/5.</div>`;
+        return;
+    }
+
+    msg.innerHTML = `<div class="login-msg error">&#10060; Authentication failed. Attempt ${secAttempts}/5 before lockout.${secAttempts >= 3 ? ' Complete the CAPTCHA.' : ''}</div>`;
+}
+
+function resetAdmin() {
+    vulnAttempts = 0; secAttempts = 0; secLocked = false;
+
+    document.getElementById('admin-vuln-body').innerHTML = `
+<div class="login-form">
+<div style="font-size:0.79rem;color:var(--text-dim);margin-bottom:12px;">&#128275; /admin &mdash; No authentication hardening</div>
+<div class="form-group"><label>Username</label><input type="text" id="vuln-user" value="admin" /></div>
+<div class="form-group"><label>Password</label><input type="password" id="vuln-pass" value="admin" /></div>
+<div style="display:flex;gap:8px;">
+<button class="btn danger" onclick="vulnLogin()">Login</button>
+<button class="btn" onclick="resetAdmin()">Reset</button>
+</div>
+<div id="vuln-msg"></div>
+</div>`;
+
+    document.getElementById('admin-sec-body').innerHTML = `
+<div class="login-form">
+<div style="font-size:0.79rem;color:var(--text-dim);margin-bottom:12px;">&#128274; /admin &mdash; Rate limited, MFA enforced</div>
+<div class="form-group"><label>Username</label><input type="text" id="sec-user" value="admin" /></div>
+<div class="form-group"><label>Password</label><input type="password" id="sec-pass" value="admin" /></div>
+<div id="sec-captcha" class="hidden" style="margin-bottom:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:0.8rem;">
+<div style="color:var(--text-dim);">CAPTCHA: What is 7 + 3?</div>
+<input type="text" id="captcha-input" placeholder="Answer..." style="margin-top:6px;background:#010409;border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:0.82rem;padding:5px 8px;width:100%;" />
+</div>
+<div style="display:flex;gap:8px;">
+<button class="btn success" onclick="secLogin()">Login</button>
+<button class="btn" onclick="resetAdmin()">Reset</button>
+</div>
+<div id="sec-msg"></div>
+</div>`;
+}
+</script>
+</body>
+</html>
